@@ -1,0 +1,1863 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>نظام إدارة المسابقة</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;900&family=Tajawal:wght@400;700;900&display=swap" rel="stylesheet" />
+
+  <!-- Firebase SDK -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getDatabase, ref, set, push, onValue, off, remove, update, get }
+      from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+    // ══════════════════════════════════════════════════
+    // 🔧 ضع هنا بيانات Firebase الخاصة فيك
+    // ══════════════════════════════════════════════════
+    const firebaseConfig = {
+      apiKey: "AIzaSyAnq0Z-2Rj3OcM7wICylOnU29zCqR6_Xeo",
+      authDomain: "competitors-4d38c.firebaseapp.com",
+      projectId: "competitors-4d38c",
+      databaseURL: "https://competitors-4d38c-default-rtdb.firebaseio.com",
+      storageBucket: "competitors-4d38c.firebasestorage.app",
+      messagingSenderId: "639845517789",
+      appId: "1:639845517789:web:fff8a8be6308d7ade4ce34"
+    };
+    // ══════════════════════════════════════════════════
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    window._fb = { db, ref, set, push, onValue, off, remove, update, get };
+    window.dispatchEvent(new Event("firebase-ready"));
+  </script>
+
+  <style>
+    /* ─── CSS Variables ─────────────────────────────── */
+    :root {
+      --bg:#0b0f1a; --bg2:#111827; --surface:#161d2e; --surface2:#1e2840;
+      --border:rgba(255,255,255,0.07); --border-strong:rgba(255,255,255,0.15);
+      --text:#e8eaf0; --text-muted:#7c8aa0; --text-subtle:#4a5568;
+      --accent:#f59e0b; --accent-muted:rgba(245,158,11,0.12); --accent-text:#1a0f00;
+      --success:#10b981; --success-muted:rgba(16,185,129,0.12);
+      --danger:#f43f5e;  --danger-muted:rgba(244,63,94,0.12);
+      --warning:#f59e0b; --warning-muted:rgba(245,158,11,0.12);
+      --info:#60a5fa;    --info-muted:rgba(96,165,250,0.12);
+      --r:10px; --r-sm:6px; --r-lg:14px;
+      --shadow:0 4px 20px rgba(0,0,0,0.4);
+      --shadow-sm:0 2px 8px rgba(0,0,0,0.3);
+    }
+    [data-theme="light"] {
+      --bg:#f0f4ff; --bg2:#e8edf8; --surface:#fff; --surface2:#f5f7ff;
+      --border:rgba(0,0,0,0.08); --border-strong:rgba(0,0,0,0.18);
+      --text:#1a1f36; --text-muted:#5a6480; --text-subtle:#9aa0b5;
+      --accent:#d97706; --accent-muted:rgba(217,119,6,0.1); --accent-text:#1a0f00;
+      --success:#059669; --success-muted:rgba(5,150,105,0.1);
+      --danger:#e11d48;  --danger-muted:rgba(225,29,72,0.1);
+      --warning:#d97706; --warning-muted:rgba(217,119,6,0.1);
+      --info:#2563eb;    --info-muted:rgba(37,99,235,0.1);
+      --shadow:0 4px 20px rgba(0,0,0,0.1);
+      --shadow-sm:0 2px 8px rgba(0,0,0,0.08);
+    }
+
+    /* ─── Reset ──────────────────────────────────────── */
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    html{scroll-behavior:smooth}
+    body{
+      font-family:'Cairo','Tajawal',sans-serif;
+      background:var(--bg); color:var(--text);
+      direction:rtl; min-height:100vh; line-height:1.6;
+      -webkit-font-smoothing:antialiased;
+      transition:background .3s,color .3s;
+    }
+    ::-webkit-scrollbar{width:5px;height:5px}
+    ::-webkit-scrollbar-track{background:transparent}
+    ::-webkit-scrollbar-thumb{background:var(--border-strong);border-radius:3px}
+
+    /* ─── Typography & Form ──────────────────────────── */
+    h1,h2,h3{font-weight:700;color:var(--text)}
+    input,select,textarea,button{font-family:inherit;font-size:14px}
+    input,select,textarea{
+      background:var(--surface2); border:1px solid var(--border-strong);
+      border-radius:var(--r); color:var(--text);
+      padding:10px 14px; outline:none; width:100%; direction:rtl;
+      transition:border-color .15s,box-shadow .15s;
+    }
+    input:focus,select:focus,textarea:focus{
+      border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-muted);
+    }
+    input::placeholder,textarea::placeholder{color:var(--text-subtle)}
+    select option{background:var(--surface2)}
+    input[type="color"]{width:44px;height:36px;padding:3px;cursor:pointer;border-radius:var(--r-sm)}
+    input[type="range"]{-webkit-appearance:none;height:4px;background:var(--border-strong);border:none;border-radius:2px;padding:0;cursor:pointer}
+    input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;background:var(--accent);border-radius:50%;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.3)}
+
+    /* ─── Animations ─────────────────────────────────── */
+    @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.55}}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    @keyframes bounce-in{0%{transform:scale(.8);opacity:0}60%{transform:scale(1.05)}100%{transform:scale(1);opacity:1}}
+    @keyframes glow-pulse{0%,100%{box-shadow:0 0 20px var(--accent-muted)}50%{box-shadow:0 0 40px var(--accent-muted),0 0 60px var(--accent-muted)}}
+    .fade-in{animation:fadeIn .3s ease both}
+    .pulse{animation:pulse 2s infinite}
+    .bounce-in{animation:bounce-in .4s cubic-bezier(.34,1.56,.64,1) both}
+    .glow{animation:glow-pulse 3s infinite}
+
+    /* ─── Layout ─────────────────────────────────────── */
+    .container{max-width:1280px;margin:0 auto;padding:0 20px}
+    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+    .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+    .grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+    @media(max-width:768px){.grid2,.grid3,.grid4{grid-template-columns:1fr}}
+
+    /* ─── Header ─────────────────────────────────────── */
+    #header{
+      position:sticky;top:0;z-index:100;
+      background:var(--bg);border-bottom:1px solid var(--border);
+      transition:all .25s;
+    }
+    #header.scrolled{background:var(--surface);box-shadow:var(--shadow)}
+    .header-top{
+      padding:10px 20px;display:flex;align-items:center;
+      justify-content:space-between;gap:12px;
+    }
+    .logo-box{display:flex;align-items:center;gap:12px}
+    .logo-icon{
+      width:42px;height:42px;border-radius:10px;
+      background:linear-gradient(135deg,var(--accent),var(--accent));
+      display:flex;align-items:center;justify-content:center;
+      font-size:22px;box-shadow:0 4px 12px var(--accent-muted);
+      flex-shrink:0;overflow:hidden;
+    }
+    .logo-img{width:100%;height:100%;object-fit:contain}
+    .logo-text{font-weight:900;font-size:17px;color:var(--accent);line-height:1.2}
+    .logo-sub{font-size:11px;color:var(--text-muted)}
+    .header-right{display:flex;align-items:center;gap:12px}
+    .conn-dot{
+      display:flex;align-items:center;gap:5px;
+      font-size:11px;font-weight:600;
+    }
+    .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+    .dot.on{background:var(--success);animation:pulse 2s infinite}
+    .dot.off{background:var(--danger)}
+    .btn-icon{
+      background:var(--surface2);border:1px solid var(--border-strong);
+      border-radius:var(--r);padding:7px 12px;cursor:pointer;
+      font-size:16px;color:var(--text);transition:all .15s;
+    }
+    .btn-display{
+      background:var(--accent);color:var(--accent-text);border:none;
+      border-radius:var(--r);padding:7px 14px;cursor:pointer;
+      font-size:13px;font-weight:700;font-family:inherit;
+      display:flex;align-items:center;gap:6px;
+    }
+    /* ─── Tabs nav ──────────────────────────────────── */
+    .tabs-nav{
+      display:flex;overflow-x:auto;padding:0 12px;gap:2px;
+      border-top:1px solid var(--border);background:var(--surface);
+    }
+    .tab-btn{
+      padding:10px 16px;font-size:13px;font-weight:500;
+      color:var(--text-muted);background:none;border:none;
+      border-bottom:2px solid transparent;cursor:pointer;
+      white-space:nowrap;display:flex;align-items:center;gap:6px;
+      transition:all .15s;font-family:inherit;flex-shrink:0;
+    }
+    .tab-btn.active{color:var(--accent);font-weight:700;border-bottom-color:var(--accent)}
+    .tab-badge{
+      background:var(--accent);color:var(--accent-text);
+      border-radius:10px;padding:1px 7px;font-size:11px;font-weight:800;
+    }
+
+    /* ─── Main content ───────────────────────────────── */
+    #main{max-width:1280px;margin:0 auto;padding:20px 20px 40px}
+    .tab-pane{display:none}
+    .tab-pane.active{display:block}
+
+    /* ─── Card ───────────────────────────────────────── */
+    .card{
+      background:var(--surface);border:1px solid var(--border-strong);
+      border-radius:var(--r-lg);overflow:hidden;
+      box-shadow:var(--shadow-sm);
+    }
+    .card.glow{box-shadow:0 0 30px var(--accent-muted)}
+    .card-head{
+      padding:14px 18px;border-bottom:1px solid var(--border);
+      display:flex;align-items:center;justify-content:space-between;gap:12px;
+      background:rgba(255,255,255,.02);
+    }
+    .card-head-left{display:flex;align-items:center;gap:10px}
+    .card-head-icon{font-size:18px}
+    .card-head-title{font-weight:700;font-size:15px;color:var(--text)}
+    .card-head-sub{font-size:12px;color:var(--text-muted)}
+    .card-body{padding:18px}
+
+    /* ─── Button ─────────────────────────────────────── */
+    .btn{
+      display:inline-flex;align-items:center;justify-content:center;gap:7px;
+      padding:9px 18px;font-size:14px;font-weight:600;border-radius:var(--r);
+      cursor:pointer;border:none;font-family:inherit;
+      transition:all .15s;white-space:nowrap;user-select:none;
+    }
+    .btn:disabled{cursor:not-allowed;opacity:.55}
+    .btn-sm{padding:6px 12px;font-size:12px;gap:5px}
+    .btn-lg{padding:12px 24px;font-size:15px;gap:8px}
+    .btn-full{width:100%}
+    .btn-primary{background:var(--accent);color:var(--accent-text);font-weight:700}
+    .btn-ghost{background:var(--surface2);color:var(--text);border:1px solid var(--border-strong)}
+    .btn-danger{background:var(--danger-muted);color:var(--danger);border:1px solid var(--danger)}
+    .btn-success{background:var(--success-muted);color:var(--success);border:1px solid var(--success)}
+    .btn-outline{background:transparent;color:var(--accent);border:1px solid var(--accent)}
+    .spin{animation:spin 1s linear infinite;display:inline-block}
+
+    /* ─── Badge ──────────────────────────────────────── */
+    .badge{
+      padding:2px 10px;border-radius:20px;font-size:12px;font-weight:600;
+      white-space:nowrap;display:inline-flex;align-items:center;gap:4px;
+    }
+    .badge-accent{background:var(--accent-muted);color:var(--accent);border:1px solid var(--accent)}
+    .badge-success{background:var(--success-muted);color:var(--success);border:1px solid var(--success)}
+    .badge-danger{background:var(--danger-muted);color:var(--danger);border:1px solid var(--danger)}
+    .badge-warning{background:var(--warning-muted);color:var(--warning);border:1px solid var(--warning)}
+    .badge-info{background:var(--info-muted);color:var(--info);border:1px solid var(--info)}
+    .badge-neutral{background:var(--surface2);color:var(--text-muted);border:1px solid var(--border-strong)}
+
+    /* ─── Avatar ─────────────────────────────────────── */
+    .avatar{
+      border-radius:50%;display:flex;align-items:center;justify-content:center;
+      font-weight:700;flex-shrink:0;
+    }
+    .avatar-accent{background:var(--accent-muted);border:1.5px solid var(--accent);color:var(--accent)}
+    .avatar-success{background:var(--success-muted);border:1.5px solid var(--success);color:var(--success)}
+    .avatar-info{background:var(--info-muted);border:1.5px solid var(--info);color:var(--info)}
+    .avatar-neutral{background:var(--surface2);border:1.5px solid var(--border-strong);color:var(--text-muted)}
+
+    /* ─── Toggle ─────────────────────────────────────── */
+    .toggle-wrap{
+      width:44px;height:24px;border-radius:12px;position:relative;
+      cursor:pointer;transition:all .2s;flex-shrink:0;
+      background:var(--surface2);border:1px solid var(--border-strong);
+    }
+    .toggle-wrap.on{background:var(--success);border-color:var(--success)}
+    .toggle-knob{
+      width:18px;height:18px;background:white;border-radius:9px;
+      position:absolute;top:2px;left:2px;
+      transition:all .2s;box-shadow:0 1px 4px rgba(0,0,0,.3);
+    }
+    .toggle-wrap.on .toggle-knob{left:auto;right:2px}
+
+    /* ─── Progress bar ───────────────────────────────── */
+    .prog-bar{height:6px;background:var(--surface2);border-radius:3px;overflow:hidden}
+    .prog-fill{height:100%;background:var(--accent);border-radius:3px;transition:width .4s}
+    .prog-label{font-size:11px;color:var(--text-muted);margin-top:4px;text-align:left}
+
+    /* ─── Search box ─────────────────────────────────── */
+    .search-wrap{position:relative}
+    .search-icon{
+      position:absolute;right:12px;top:50%;transform:translateY(-50%);
+      color:var(--text-subtle);font-size:15px;pointer-events:none;
+    }
+    .search-wrap input{padding-right:36px}
+
+    /* ─── Divider ────────────────────────────────────── */
+    .divider{display:flex;align-items:center;gap:12px;margin:16px 0}
+    .divider-line{flex:1;height:1px;background:var(--border)}
+    .divider-label{font-size:12px;color:var(--text-subtle);white-space:nowrap}
+
+    /* ─── Stat card ──────────────────────────────────── */
+    .stat-card{
+      background:var(--surface2);border-radius:var(--r);padding:16px;
+      text-align:center;border:1px solid var(--border);
+    }
+    .stat-icon{font-size:22px;margin-bottom:4px}
+    .stat-value{font-size:28px;font-weight:900;line-height:1}
+    .stat-label{font-size:12px;color:var(--text-muted);margin-top:4px}
+
+    /* ─── Toast ──────────────────────────────────────── */
+    #toast-container{
+      position:fixed;top:16px;left:50%;transform:translateX(-50%);
+      z-index:9999;display:flex;flex-direction:column;gap:8px;
+      pointer-events:none;min-width:280px;
+    }
+    .toast{
+      background:var(--surface);border-radius:var(--r);
+      padding:12px 16px;display:flex;align-items:center;gap:10px;
+      box-shadow:var(--shadow);font-weight:600;font-size:14px;
+      animation:fadeIn .3s ease both;
+    }
+
+    /* ─── Exam stopwatch ─────────────────────────────── */
+    #sw-display{
+      font-family:monospace;font-size:58px;font-weight:900;
+      letter-spacing:3px;line-height:1;transition:color .5s;
+    }
+    .sw-dots{display:flex;justify-content:center;gap:4px;margin-top:12px}
+    .sw-dot{width:6px;height:6px;border-radius:50%;background:var(--border-strong);transition:background .3s}
+
+    /* ─── Current competitor card ────────────────────── */
+    #current-comp-box{
+      background:linear-gradient(135deg,var(--accent-muted),transparent);
+      border:1px solid var(--accent);border-radius:var(--r-lg);
+      padding:28px 20px;text-align:center;position:relative;overflow:hidden;
+    }
+    #comp-num{font-size:80px;font-weight:900;color:var(--accent);line-height:1;margin-bottom:4px}
+    #comp-name{font-size:28px;font-weight:800;margin-bottom:6px}
+
+    /* ─── Misc helpers ───────────────────────────────── */
+    .label-small{
+      font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;
+      color:var(--text-subtle);margin-bottom:6px;
+    }
+    .row-item{
+      display:flex;align-items:center;justify-content:space-between;
+      padding:10px 4px;border-bottom:1px solid var(--border);gap:10px;
+    }
+    .row-item:last-child{border-bottom:none}
+    .empty-state{text-align:center;padding:48px 24px;color:var(--text-muted)}
+    .empty-icon{font-size:48px;margin-bottom:12px;opacity:.4}
+    .scrollable{max-height:560px;overflow-y:auto}
+    .scrollable-sm{max-height:220px;overflow-y:auto}
+    .gap8{gap:8px}
+    .gap12{gap:12px}
+    .gap16{gap:16px}
+    .flex-col{display:flex;flex-direction:column}
+    .flex-center{display:flex;align-items:center;gap:10px}
+
+    /* ─── Color preset dots ──────────────────────────── */
+    .color-preset{
+      display:flex;align-items:center;gap:5px;
+      padding:5px 10px;border-radius:var(--r-sm);
+      border:2px solid transparent;cursor:pointer;
+      background:var(--surface2);font-size:12px;font-weight:600;
+      color:var(--text-muted);transition:all .15s;
+    }
+    .color-preset.active{color:inherit}
+    .color-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0}
+
+    /* ─── Quick tips ─────────────────────────────────── */
+    .tips{font-size:13px;color:var(--text-muted);line-height:2.2}
+
+    /* ─── Display page (removed - now in new window) ─── */
+  </style>
+</head>
+<body>
+
+<!-- ══════════════ TOAST ══════════════ -->
+<div id="toast-container"></div>
+
+<!-- ══════════════ HEADER ══════════════ -->
+<div id="header">
+  <div class="header-top">
+    <div class="logo-box">
+      <div class="logo-icon" id="logo-icon-wrap">🏆</div>
+      <div>
+        <div class="logo-text" id="hdr-comp-name">بطولة المعرفة ٢٠٢٥</div>
+        <div class="logo-sub">لوحة إدارة المسابقة</div>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="conn-dot">
+        <div class="dot off" id="conn-dot"></div>
+        <span id="conn-label" style="color:var(--danger)">غير متصل</span>
+      </div>
+      <button class="btn-icon" id="theme-btn" title="تبديل الوضع">☀️</button>
+      <button class="btn-display" id="open-display-btn">📺 شاشة العرض</button>
+    </div>
+  </div>
+  <div class="tabs-nav" id="tabs-nav"></div>
+</div>
+
+<!-- ══════════════ MAIN CONTENT ══════════════ -->
+<div id="main">
+
+  <!-- ── TAB: المتسابقون ── -->
+  <div class="tab-pane active" id="tab-registration">
+    <div class="grid2">
+      <!-- Add Form -->
+      <div class="flex-col gap16">
+        <div class="card">
+          <div class="card-head">
+            <div class="card-head-left"><span class="card-head-icon">➕</span><span class="card-head-title">إضافة متسابق</span></div>
+          </div>
+          <div class="card-body flex-col gap12">
+            <div>
+              <div class="label-small">الاسم الكامل</div>
+              <input type="text" id="reg-name" placeholder="اسم المتسابق..." />
+            </div>
+            <div>
+              <div class="label-small">الفئة</div>
+              <select id="reg-cat"></select>
+            </div>
+            <button class="btn btn-primary btn-full" id="reg-add-btn" onclick="handleAdd()">➕ إضافة متسابق</button>
+
+            <div class="divider"><div class="divider-line"></div><span class="divider-label">استيراد ملف</span><div class="divider-line"></div></div>
+            <p style="font-size:12px;color:var(--text-muted)">ارفع ملف <strong style="color:var(--accent)">CSV أو Excel</strong> — الاسم في العمود الأول، الفئة في العمود الثاني (اختياري)</p>
+            <input type="file" id="reg-file" accept=".csv,.xlsx,.xls,.txt" style="padding:8px;background:var(--surface2);border:1px solid var(--border-strong);border-radius:var(--r);color:var(--text)" onchange="handleFileSelect(this)" />
+            <div id="import-preview" style="font-size:12px;color:var(--text-muted);margin-top:4px"></div>
+            <button class="btn btn-ghost btn-full" onclick="handleImport()">📥 استيراد الملف</button>
+          </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="card">
+          <div class="card-head"><div class="card-head-left"><span class="card-head-icon">📊</span><span class="card-head-title">إحصائيات التسجيل</span></div></div>
+          <div class="card-body">
+            <div class="grid3 gap8" id="reg-stats"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- List -->
+      <div class="card">
+        <div class="card-head">
+          <div class="card-head-left"><span class="card-head-icon">👥</span><span class="card-head-title">المتسابقون المسجلون</span><span class="badge badge-accent" id="reg-count">0</span></div>
+        </div>
+        <div class="card-body">
+          <div class="search-wrap"><span class="search-icon">🔍</span><input type="text" id="reg-search" placeholder="بحث بالاسم أو الفئة..." oninput="renderRegList()" style="padding-right:36px" /></div>
+          <div class="scrollable" style="margin-top:12px" id="reg-list"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── TAB: الاستقبال ── -->
+  <div class="tab-pane" id="tab-checkin">
+    <div class="card">
+      <div class="card-head">
+        <div class="card-head-left"><span class="card-head-icon">✅</span><span class="card-head-title">تأكيد الحضور</span><span class="badge badge-success" id="checkin-badge">0/0</span></div>
+      </div>
+      <div class="card-body">
+        <div class="prog-bar"><div class="prog-fill" id="checkin-prog" style="width:0%"></div></div>
+        <div class="prog-label" id="checkin-prog-pct">0%</div>
+        <div style="margin-top:16px" class="search-wrap"><span class="search-icon">🔍</span><input type="text" id="checkin-search" placeholder="بحث بالاسم أو الفئة..." oninput="renderCheckinList()" style="padding-right:36px" /></div>
+        <div class="scrollable" style="margin-top:12px" id="checkin-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── TAB: الانتظار ── -->
+  <div class="tab-pane" id="tab-queue">
+    <div class="grid2">
+      <div class="card">
+        <div class="card-head">
+          <div class="card-head-left"><span class="card-head-icon">⏳</span><span class="card-head-title">قائمة الانتظار</span><span class="badge badge-warning" id="queue-badge">0</span></div>
+        </div>
+        <div class="card-body" id="queue-body"></div>
+      </div>
+      <div class="flex-col gap16">
+        <div class="card">
+          <div class="card-head"><div class="card-head-left"><span class="card-head-icon">✅</span><span class="card-head-title">أنهوا الاختبار</span><span class="badge badge-success" id="done-badge">0</span></div></div>
+          <div class="card-body"><div class="scrollable-sm" id="done-list"></div></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><div class="card-head-left"><span class="card-head-icon">⏭️</span><span class="card-head-title">تخطّوا</span><span class="badge badge-danger" id="skipped-badge">0</span></div></div>
+          <div class="card-body"><div class="scrollable-sm" id="skipped-list"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── TAB: غرفة الاختبار ── -->
+  <div class="tab-pane" id="tab-exam">
+    <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:16px;align-items:start">
+      <div class="flex-col gap16">
+        <div class="card" id="exam-card">
+          <div class="card-head"><div class="card-head-left"><span class="card-head-icon">🎯</span><span class="card-head-title">غرفة الاختبار</span></div></div>
+          <div class="card-body" id="exam-body"></div>
+        </div>
+      </div>
+      <div class="flex-col gap16">
+        <div class="card">
+          <div class="card-head"><div class="card-head-left"><span class="card-head-icon">👤</span><span class="card-head-title">التالي في الانتظار</span></div></div>
+          <div class="card-body" id="next-comp-box"></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><div class="card-head-left"><span class="card-head-icon">📊</span><span class="card-head-title">الإحصائيات</span></div></div>
+          <div class="card-body"><div class="grid3 gap8" id="exam-stats"></div></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><div class="card-head-left"><span class="card-head-icon">💡</span><span class="card-head-title">تلميحات سريعة</span></div></div>
+          <div class="card-body tips">
+            <div>▶ اضغط <strong style="color:var(--accent)">التالي</strong> لإنهاء الدور الحالي واستدعاء التالي</div>
+            <div>🔴 اضغط <strong style="color:var(--danger)">لم يحضر</strong> للتخطّي</div>
+            <div>⏱ العداد يبدأ تلقائياً عند الاستدعاء</div>
+            <div>🟡 تحذير بعد 5 دقائق</div>
+            <div>🔴 تنبيه بعد 10 دقائق</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── TAB: السجل ── -->
+  <div class="tab-pane" id="tab-logs">
+    <div class="card">
+      <div class="card-head"><div class="card-head-left"><span class="card-head-icon">📜</span><span class="card-head-title">سجل الأحداث</span><span class="badge badge-neutral" id="logs-badge">0</span></div></div>
+      <div class="card-body"><div style="max-height:600px;overflow-y:auto" id="logs-list"></div></div>
+    </div>
+  </div>
+
+  <!-- ── TAB: الإعدادات ── -->
+  <div class="tab-pane" id="tab-settings">
+    <div class="grid2">
+      <div class="flex-col gap16">
+        <!-- General -->
+        <div class="card">
+          <div class="card-head"><div class="card-head-left"><span class="card-head-icon">🏷️</span><span class="card-head-title">إعدادات عامة</span></div></div>
+          <div class="card-body flex-col gap12">
+            <div><div class="label-small">اسم المسابقة</div><input type="text" id="s-comp-name" /></div>
+            <div><div class="label-small">الفئات (سطر لكل فئة)</div><textarea id="s-cats" rows="5"></textarea></div>
+            <div>
+              <div class="label-small">الشعار (صورة PNG/JPG)</div>
+              <input type="file" id="s-logo-file" accept="image/*" onchange="handleLogoUpload(this)" style="padding:8px;background:var(--surface2);border:1px solid var(--border-strong);border-radius:var(--r);color:var(--text)" />
+              <div id="s-logo-preview" style="margin-top:6px"></div>
+            </div>
+          </div>
+        </div>
+        <!-- Sound -->
+        <div class="card">
+          <div class="card-head"><div class="card-head-left"><span class="card-head-icon">🔊</span><span class="card-head-title">إعدادات الصوت</span></div></div>
+          <div class="card-body flex-col gap12">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <span style="font-size:14px;font-weight:600">تفعيل الصوت</span>
+              <div class="toggle-wrap" id="snd-toggle" onclick="toggleSetting('soundEnabled')"></div>
+            </div>
+            <div>
+              <div class="label-small" id="vol-label">مستوى الصوت: 75%</div>
+              <input type="range" id="s-vol" min="0" max="1" step="0.05" value="0.75" oninput="updateVolLabel(this.value)" />
+            </div>
+            <div>
+              <div class="label-small">معاينة الأصوات</div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap">
+                <button class="btn btn-ghost btn-sm" onclick="playSound('call')">🔔 استدعاء</button>
+                <button class="btn btn-ghost btn-sm" onclick="playSound('checkin')">✅ حضور</button>
+                <button class="btn btn-ghost btn-sm" onclick="playSound('next')">⏭️ التالي</button>
+                <button class="btn btn-ghost btn-sm" onclick="playSound('skip')">⏭️ تخطّي</button>
+                <button class="btn btn-ghost btn-sm" onclick="playSound('success')">🎉 نجاح</button>
+                <button class="btn btn-ghost btn-sm" onclick="playSound('milestone')">⏱ دقيقة</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="flex-col gap16">
+        <!-- Appearance -->
+        <div class="card">
+          <div class="card-head"><div class="card-head-left"><span class="card-head-icon">🎨</span><span class="card-head-title">المظهر والألوان</span></div></div>
+          <div class="card-body flex-col gap12">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <span style="font-size:14px;font-weight:600">الوضع الداكن</span>
+              <div class="toggle-wrap on" id="theme-toggle" onclick="toggleSetting('theme')"></div>
+            </div>
+            <div>
+              <div class="label-small">لون التمييز</div>
+              <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px" id="accent-presets"></div>
+              <div style="display:flex;align-items:center;gap:10px">
+                <div class="label-small">مخصص:</div>
+                <input type="color" id="s-accent" value="#f59e0b" oninput="setAccent(this.value)" style="width:54px" />
+              </div>
+            </div>
+            <div class="divider"><div class="divider-line"></div><span class="divider-label">الخلفيات</span><div class="divider-line"></div></div>
+            <div>
+              <div class="label-small">خلفية الموقع (صورة PNG/JPG)</div>
+              <input type="file" id="s-bg-file" accept="image/*" onchange="handleBgUpload(this,'bg')" style="padding:8px" />
+              <div id="s-bg-preview" style="margin-top:6px;font-size:12px;color:var(--text-muted)"></div>
+            </div>
+            <div>
+              <div class="label-small">خلفية شاشة العرض (صورة PNG/JPG)</div>
+              <input type="file" id="s-dispbg-file" accept="image/*" onchange="handleBgUpload(this,'dispbg')" style="padding:8px" />
+              <div id="s-dispbg-preview" style="margin-top:6px;font-size:12px;color:var(--text-muted)"></div>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <span style="font-size:14px">إظهار المتسابق التالي في شاشة العرض</span>
+              <div class="toggle-wrap on" id="shownext-toggle" onclick="toggleSetting('showNextOnDisplay')"></div>
+            </div>
+          </div>
+        </div>
+        <!-- Summary -->
+        <div class="card">
+          <div class="card-head"><div class="card-head-left"><span class="card-head-icon">📊</span><span class="card-head-title">ملخص المسابقة</span></div></div>
+          <div class="card-body"><div class="grid2 gap8" id="settings-stats"></div></div>
+        </div>
+        <!-- Danger zone -->
+        <div class="card">
+          <div class="card-head"><div class="card-head-left"><span class="card-head-icon">⚠️</span><span class="card-head-title">منطقة الخطر</span></div></div>
+          <div class="card-body flex-col gap8">
+            <button class="btn btn-ghost btn-full" onclick="resetCheckin()">🔄 إعادة ضبط الحضور فقط</button>
+            <button class="btn btn-danger btn-full" onclick="resetAll()">🗑️ حذف كل البيانات</button>
+          </div>
+        </div>
+        <button class="btn btn-primary btn-full btn-lg" onclick="saveSettings()">💾 حفظ جميع الإعدادات</button>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /main -->
+
+<!-- display window opened via JS -->
+
+<script>
+// ══════════════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════════════
+let competitors = {};
+let appState = {
+  currentCompetitorId: null, stopwatchStartedAt: null, stopwatchElapsed: 0,
+  stopwatchRunning: false, queueCounter: 0, lastUpdated: Date.now(), displayMessage: ""
+};
+let settings = {
+  compName: "بطولة المعرفة ٢٠٢٥", categories: ["عام","أ","ب","ج","د"],
+  soundEnabled: true, volume: 0.75, theme: "dark", accentColor: "#f59e0b",
+  bgImageUrl: "", displayBgUrl: "", logoUrl: "", showNextOnDisplay: true
+};
+let activeTab = "registration";
+let swInterval = null;
+let displaySwInterval = null;
+let prevCompId = null;
+let displayUnlocked = false;
+
+const ACCENT_PRESETS = [
+  {name:"ذهبي",color:"#f59e0b"},{name:"أزرق ملكي",color:"#3b82f6"},{name:"أخضر زمردي",color:"#10b981"},
+  {name:"بنفسجي",color:"#8b5cf6"},{name:"وردي",color:"#ec4899"},{name:"برتقالي",color:"#f97316"},
+  {name:"سماوي",color:"#06b6d4"},{name:"أحمر ياقوتي",color:"#f43f5e"}
+];
+
+// ══════════════════════════════════════════════════════
+// FIREBASE INIT
+// ══════════════════════════════════════════════════════
+window.addEventListener("firebase-ready", () => {
+  const {db, ref, set, push, onValue, off, remove, update} = window._fb;
+
+  // Connection
+  onValue(ref(db, ".info/connected"), snap => {
+    const on = snap.val() === true;
+    document.getElementById("conn-dot").className = "dot " + (on ? "on" : "off");
+    document.getElementById("conn-label").textContent = on ? "متصل" : "غير متصل";
+    document.getElementById("conn-label").style.color = on ? "var(--success)" : "var(--danger)";
+  });
+
+  // Competitors
+  onValue(ref(db, "competitors"), snap => {
+    competitors = snap.val() || {};
+    renderAll();
+  });
+
+  // AppState
+  onValue(ref(db, "appState"), snap => {
+    if (snap.val()) {
+      appState = snap.val();
+      renderExam();
+      updateDisplaySW();
+    }
+  });
+
+  // Settings
+  onValue(ref(db, "settings"), snap => {
+    if (snap.val()) {
+      settings = {...settings, ...snap.val()};
+      applyTheme();
+      syncSettingsUI();
+      renderAll();
+    }
+  });
+
+  // Logs
+  onValue(ref(db, "logs"), snap => {
+    const data = snap.val();
+    if (!data) { renderLogs([]); return; }
+    const arr = Object.entries(data)
+      .map(([id, v]) => ({...v, id}))
+      .sort((a, b) => b.timestamp - a.timestamp)
+      .slice(0, 200);
+    renderLogs(arr);
+  });
+
+  // Init appState
+  set(ref(db, "appState"), appState).catch(() => {});
+});
+
+// ══════════════════════════════════════════════════════
+// DERIVED STATE
+// ══════════════════════════════════════════════════════
+function getCompList() {
+  return Object.values(competitors).sort((a, b) => a.createdAt - b.createdAt);
+}
+function getWaitingQueue() {
+  return getCompList().filter(c => c.status === "waiting").sort((a, b) => (a.queuePosition||999) - (b.queuePosition||999));
+}
+function getCurrentComp() {
+  return appState.currentCompetitorId ? competitors[appState.currentCompetitorId] || null : null;
+}
+function getNextComp() {
+  return getWaitingQueue()[0] || null;
+}
+function getDoneList() { return getCompList().filter(c => c.status === "done"); }
+function getSkippedList() { return getCompList().filter(c => c.status === "skipped"); }
+
+// ══════════════════════════════════════════════════════
+// TABS
+// ══════════════════════════════════════════════════════
+const TABS = [
+  {id:"registration", label:"المتسابقون", icon:"📋"},
+  {id:"checkin", label:"الاستقبال", icon:"✅"},
+  {id:"queue", label:"الانتظار", icon:"⏳"},
+  {id:"exam", label:"غرفة الاختبار", icon:"🎯"},
+  {id:"logs", label:"السجل", icon:"📜"},
+  {id:"settings", label:"الإعدادات", icon:"⚙️"},
+];
+
+function buildTabs() {
+  const nav = document.getElementById("tabs-nav");
+  nav.innerHTML = TABS.map(t => `
+    <button class="tab-btn${t.id===activeTab?" active":""}" onclick="switchTab('${t.id}')" id="tabbtn-${t.id}">
+      <span>${t.icon}</span>${t.label}
+      <span class="tab-badge" id="tab-badge-${t.id}" style="display:none">0</span>
+    </button>
+  `).join("");
+}
+
+function switchTab(id) {
+  activeTab = id;
+  document.querySelectorAll(".tab-pane").forEach(p => p.classList.remove("active"));
+  document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+  document.getElementById("tab-" + id).classList.add("active");
+  document.getElementById("tabbtn-" + id).classList.add("active");
+}
+
+function setTabBadge(id, val) {
+  const el = document.getElementById("tab-badge-" + id);
+  if (!el) return;
+  if (val > 0) { el.style.display = ""; el.textContent = val; }
+  else el.style.display = "none";
+}
+
+// ══════════════════════════════════════════════════════
+// RENDER ALL
+// ══════════════════════════════════════════════════════
+function renderAll() {
+  renderRegList();
+  renderRegStats();
+  renderCheckinList();
+  renderQueue();
+  renderExam();
+  updateTabBadges();
+}
+
+function updateTabBadges() {
+  const list = getCompList();
+  const notChecked = list.filter(c => !c.checkedIn).length;
+  setTabBadge("registration", list.length);
+  setTabBadge("checkin", notChecked);
+  setTabBadge("queue", getWaitingQueue().length);
+}
+
+// ── REGISTRATION ──
+function renderRegList() {
+  const search = document.getElementById("reg-search").value;
+  const list = getCompList().filter(c =>
+    c.name.includes(search) || (c.category||"").includes(search) || String(c.queuePosition||"").includes(search)
+  );
+  const statusColor = {registered:"neutral",waiting:"info",current:"accent",done:"success",skipped:"danger"};
+  const statusLabel = {registered:"مسجل",waiting:"ينتظر",current:"حالياً",done:"انتهى",skipped:"تخطّي"};
+
+  document.getElementById("reg-count").textContent = getCompList().length;
+  document.getElementById("reg-list").innerHTML = list.length === 0
+    ? `<div class="empty-state"><div class="empty-icon">📋</div><p>${search ? "لا توجد نتائج" : "لا يوجد متسابقون بعد"}</p></div>`
+    : list.map(c => `
+      <div class="row-item fade-in">
+        <div class="flex-center" style="flex:1;min-width:0">
+          <div class="avatar avatar-${c.status==="done"?"success":c.status==="current"?"accent":"neutral"}" style="width:40px;height:40px;font-size:14px">${c.name.charAt(0)||"؟"}</div>
+          <div style="min-width:0">
+            <div style="font-weight:600;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.name}</div>
+            <div style="font-size:12px;color:var(--text-muted)">${c.category}</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+          <span class="badge badge-${statusColor[c.status]}">${statusLabel[c.status]}</span>
+          ${c.status==="registered" ? `
+            <button class="btn btn-ghost btn-sm" onclick="openEdit('${c.id}')">✏️</button>
+            <button class="btn btn-danger btn-sm" onclick="deleteComp('${c.id}','${c.name.replace(/'/g,"\\'")}')">🗑️</button>
+          ` : ""}
+        </div>
+      </div>
+    `).join("");
+}
+
+function renderRegStats() {
+  const list = getCompList();
+  const statuses = ["registered","waiting","current","done","skipped"];
+  const colors = {registered:"var(--text-muted)",waiting:"var(--info)",current:"var(--accent)",done:"var(--success)",skipped:"var(--danger)"};
+  const labels = {registered:"مسجل",waiting:"ينتظر",current:"حالياً",done:"انتهى",skipped:"تخطّي"};
+  document.getElementById("reg-stats").innerHTML = statuses.map(s => {
+    const count = list.filter(c => c.status===s).length;
+    return `<div style="background:var(--surface2);border-radius:var(--r);padding:12px 8px;text-align:center;border:1px solid ${colors[s]}22">
+      <div style="font-size:24px;font-weight:900;color:${colors[s]}">${count}</div>
+      <div style="font-size:11px;color:var(--text-muted)">${labels[s]}</div>
+    </div>`;
+  }).join("");
+}
+
+// ── CHECKIN ──
+function renderCheckinList() {
+  const search = document.getElementById("checkin-search").value;
+  const list = getCompList().filter(c => c.name.includes(search) || (c.category||"").includes(search));
+  const checked = getCompList().filter(c => c.checkedIn).length;
+  const total = getCompList().length;
+  const pct = total > 0 ? Math.round(checked/total*100) : 0;
+
+  document.getElementById("checkin-badge").textContent = checked+"/"+total;
+  document.getElementById("checkin-prog").style.width = pct+"%";
+  document.getElementById("checkin-prog-pct").textContent = pct+"%";
+
+  document.getElementById("checkin-list").innerHTML = list.length === 0
+    ? `<div class="empty-state"><div class="empty-icon">🔍</div><p>لا توجد نتائج</p></div>`
+    : list.map(c => `
+      <div class="row-item" style="opacity:${c.status==="done"||c.status==="skipped"?0.5:1}">
+        <div class="flex-center" style="flex:1;min-width:0">
+          <div class="avatar avatar-${c.checkedIn?"success":"neutral"}" style="width:40px;height:40px;font-size:14px">${c.name.charAt(0)||"؟"}</div>
+          <div style="min-width:0">
+            <div style="font-weight:600;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.name}</div>
+            <div style="font-size:12px;color:var(--text-muted)">${c.category}${c.checkedIn&&c.queuePosition?" · رقم الدور: "+c.queuePosition:""}${c.checkedIn&&c.checkInTime?" · "+new Date(c.checkInTime).toLocaleTimeString("ar-SA",{hour:"2-digit",minute:"2-digit"}):""}</div>
+          </div>
+        </div>
+        <div style="flex-shrink:0">
+          ${c.checkedIn
+            ? `<span class="badge badge-success">✓ حضر</span>`
+            : `<button class="btn btn-success btn-sm" onclick="checkIn('${c.id}')">✅ حضر</button>`
+          }
+        </div>
+      </div>
+    `).join("");
+}
+
+// ── QUEUE ──
+function renderQueue() {
+  const waiting = getWaitingQueue();
+  const done = getDoneList();
+  const skipped = getSkippedList();
+  const current = getCurrentComp();
+
+  document.getElementById("queue-badge").textContent = waiting.length;
+  document.getElementById("done-badge").textContent = done.length;
+  document.getElementById("skipped-badge").textContent = skipped.length;
+
+  // Waiting list
+  let qHtml = "";
+  if (current) {
+    qHtml += `<div style="background:var(--accent-muted);border:1px solid var(--accent);border-radius:var(--r);padding:12px 14px;display:flex;align-items:center;gap:10px;margin-bottom:12px">
+      <div style="width:36px;height:36px;background:var(--accent);border-radius:var(--r-sm);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0">🎯</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:11px;color:var(--accent);font-weight:700;text-transform:uppercase;letter-spacing:1px">يُختبر الآن</div>
+        <div style="font-weight:700;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${current.name}</div>
+        <div style="font-size:12px;color:var(--text-muted)">${current.category}</div>
+      </div>
+    </div>`;
+  }
+  if (waiting.length === 0) {
+    qHtml += `<div class="empty-state"><div class="empty-icon">⏳</div><p>قائمة الانتظار فارغة</p></div>`;
+  } else {
+    qHtml += `<div class="scrollable">` + waiting.map((c, i) => `
+      <div class="row-item">
+        <div style="width:32px;height:32px;background:${i===0?"var(--accent-muted)":"var(--surface2)"};border:1px solid ${i===0?"var(--accent)":"var(--border-strong)"};border-radius:var(--r-sm);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;color:${i===0?"var(--accent)":"var(--text-muted)"};flex-shrink:0">${c.queuePosition}</div>
+        <div class="avatar avatar-info" style="width:34px;height:34px;font-size:12px">${c.name.charAt(0)}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:600;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.name}</div>
+          <div style="font-size:12px;color:var(--text-muted)">${c.category}${c.checkInTime?" · "+new Date(c.checkInTime).toLocaleTimeString("ar-SA",{hour:"2-digit",minute:"2-digit"}):""}</div>
+        </div>
+        ${i===0?`<span class="badge badge-accent">التالي</span>`:""}
+      </div>
+    `).join("") + `</div>`;
+  }
+  document.getElementById("queue-body").innerHTML = qHtml;
+
+  // Done
+  document.getElementById("done-list").innerHTML = done.length === 0
+    ? `<div class="empty-state" style="padding:24px"><div class="empty-icon" style="font-size:32px">✅</div><p>لا أحد انتهى بعد</p></div>`
+    : done.map(c => `<div class="row-item"><div class="avatar avatar-success" style="width:32px;height:32px;font-size:11px">${c.name.charAt(0)}</div><div style="flex:1;font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.name}</div><span class="badge badge-success">#${c.queuePosition}</span></div>`).join("");
+
+  // Skipped
+  document.getElementById("skipped-list").innerHTML = skipped.length === 0
+    ? `<div class="empty-state" style="padding:24px"><div class="empty-icon" style="font-size:32px">⏭️</div><p>لا يوجد متخطّون</p></div>`
+    : skipped.map(c => `<div class="row-item"><div class="avatar avatar-neutral" style="width:32px;height:32px;font-size:11px">${c.name.charAt(0)}</div><div style="flex:1;font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.name}</div><span class="badge badge-danger">تخطّي</span></div>`).join("");
+}
+
+// ── EXAM ──
+function renderExam() {
+  const current = getCurrentComp();
+  const next = getNextComp();
+  const waiting = getWaitingQueue();
+  const done = getDoneList();
+  const skipped = getSkippedList();
+
+  // Exam card glow
+  document.getElementById("exam-card").className = "card" + (current ? " glow" : "");
+
+  // Next comp
+  document.getElementById("next-comp-box").innerHTML = next
+    ? `<div class="flex-center">
+        <div class="avatar avatar-info" style="width:48px;height:48px;font-size:18px">${next.name.charAt(0)}</div>
+        <div>
+          <div style="font-weight:700;font-size:16px">${next.name}</div>
+          <div style="font-size:13px;color:var(--text-muted)">دور #${next.queuePosition} · ${next.category}</div>
+        </div>
+      </div>`
+    : `<div style="color:var(--text-muted);font-size:14px;text-align:center;padding:12px 0">لا يوجد متسابق تالٍ</div>`;
+
+  // Stats
+  document.getElementById("exam-stats").innerHTML = `
+    <div class="stat-card" style="border-color:var(--warning)33"><div class="stat-icon">⏳</div><div class="stat-value" style="color:var(--warning)">${waiting.length}</div><div class="stat-label">ينتظر</div></div>
+    <div class="stat-card" style="border-color:var(--success)33"><div class="stat-icon">✅</div><div class="stat-value" style="color:var(--success)">${done.length}</div><div class="stat-label">انتهى</div></div>
+    <div class="stat-card" style="border-color:var(--danger)33"><div class="stat-icon">⏭️</div><div class="stat-value" style="color:var(--danger)">${skipped.length}</div><div class="stat-label">تخطّي</div></div>
+  `;
+
+  if (current) {
+    document.getElementById("exam-body").innerHTML = `
+      <div style="text-align:center">
+        <div id="current-comp-box">
+          <div id="comp-num">#${current.queuePosition}</div>
+          <div id="comp-name">${current.name}</div>
+          <span class="badge badge-accent">${current.category}</span>
+        </div>
+        <!-- Stopwatch -->
+        <div style="margin:20px 0 12px;padding:20px;background:var(--surface2);border-radius:var(--r-lg);border:1px solid var(--info)33">
+          <div style="font-size:11px;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">⏱ عداد الإيقاف</div>
+          <div id="sw-display" style="color:var(--info)">00:00</div>
+          <div id="sw-stage-msg" style="font-size:12px;margin-top:4px"></div>
+          <div class="sw-dots" id="sw-dots">${Array.from({length:10}).map((_,i)=>`<div class="sw-dot" id="sw-dot-${i}"></div>`).join("")}</div>
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:16px;justify-content:center">
+          <button class="btn btn-ghost" id="sw-toggle-btn" onclick="toggleStopwatch()">⏸ إيقاف مؤقت</button>
+          <button class="btn btn-ghost" onclick="resetStopwatch()">🔄 إعادة ضبط</button>
+        </div>
+        <div style="display:flex;gap:10px">
+          <button class="btn btn-primary btn-full" id="call-next-btn" onclick="callNext()">⏭️ التالي</button>
+          <button class="btn btn-danger" id="skip-btn" onclick="skipCurrent()">🚫 لم يحضر</button>
+        </div>
+      </div>
+    `;
+    startSwInterval();
+  } else {
+    stopSwInterval();
+    document.getElementById("exam-body").innerHTML = `
+      <div style="text-align:center;padding:32px 20px">
+        <div style="font-size:64px;margin-bottom:16px;opacity:.3">🎯</div>
+        <div style="font-size:18px;color:var(--text-muted);margin-bottom:20px">
+          ${waiting.length > 0 ? waiting.length+" متسابق ينتظر" : "لا يوجد متسابقون في الانتظار"}
+        </div>
+        ${waiting.length > 0 ? `<button class="btn btn-primary btn-lg" onclick="callNext()">🚀 استدعاء الأول</button>` : ""}
+      </div>
+    `;
+  }
+  updateSwUI();
+}
+
+// ── LOGS ──
+function renderLogs(logs) {
+  document.getElementById("logs-badge").textContent = logs.length;
+  const iconMap = {success:"✅",info:"ℹ️",warning:"⚠️",error:"❌"};
+  const colorMap = {success:"var(--success)",info:"var(--info)",warning:"var(--warning)",error:"var(--danger)"};
+  document.getElementById("logs-list").innerHTML = logs.length === 0
+    ? `<div class="empty-state"><div class="empty-icon">📜</div><p>السجل فارغ</p></div>`
+    : logs.map((log, i) => `
+      <div style="display:flex;align-items:flex-start;gap:10px;padding:10px 4px;border-bottom:1px solid var(--border)">
+        <span style="font-size:14px;flex-shrink:0;margin-top:1px">${iconMap[log.type]||"ℹ️"}</span>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:14px;font-weight:500;color:${colorMap[log.type]||"var(--info)"};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${log.message}</div>
+          <div style="font-size:11px;color:var(--text-subtle);margin-top:2px">${new Date(log.timestamp).toLocaleTimeString("ar-SA",{hour:"2-digit",minute:"2-digit",second:"2-digit"})}</div>
+        </div>
+      </div>
+    `).join("");
+}
+
+// ══════════════════════════════════════════════════════
+// STOPWATCH
+// ══════════════════════════════════════════════════════
+function getElapsed() {
+  if (appState.stopwatchRunning && appState.stopwatchStartedAt) {
+    return appState.stopwatchElapsed + (Date.now() - appState.stopwatchStartedAt);
+  }
+  return appState.stopwatchElapsed;
+}
+
+function formatTime(ms) {
+  const total = Math.floor(ms / 1000);
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  if (h > 0) return String(h).padStart(2,"0")+":"+String(m).padStart(2,"0")+":"+String(s).padStart(2,"0");
+  return String(m).padStart(2,"0")+":"+String(s).padStart(2,"0");
+}
+
+function updateSwUI() {
+  const el = document.getElementById("sw-display");
+  if (!el) return;
+  const elapsed = getElapsed();
+  const totalSec = Math.floor(elapsed / 1000);
+  const color = totalSec > 600 ? "var(--danger)" : totalSec > 300 ? "var(--warning)" : "var(--info)";
+  el.textContent = formatTime(elapsed);
+  el.style.color = color;
+  el.style.animation = totalSec > 600 ? "pulse 1s infinite" : "";
+
+  const stageMsg = document.getElementById("sw-stage-msg");
+  if (stageMsg) {
+    if (totalSec > 600) stageMsg.innerHTML = `<span style="color:var(--danger);font-weight:700">🔴 مدة طويلة جداً!</span>`;
+    else if (totalSec > 300) stageMsg.innerHTML = `<span style="color:var(--warning);font-weight:600">⚠️ مدة طويلة</span>`;
+    else stageMsg.innerHTML = "";
+  }
+
+  // Dots
+  for (let i = 0; i < 10; i++) {
+    const dot = document.getElementById("sw-dot-"+i);
+    if (dot) dot.style.background = totalSec > i * 30 ? color : "var(--border-strong)";
+  }
+
+  // Toggle btn
+  const btn = document.getElementById("sw-toggle-btn");
+  if (btn) btn.innerHTML = appState.stopwatchRunning ? "⏸ إيقاف مؤقت" : "▶️ تشغيل";
+}
+
+function startSwInterval() {
+  stopSwInterval();
+  if (appState.stopwatchRunning) {
+    swInterval = setInterval(updateSwUI, 1000);
+  }
+}
+function stopSwInterval() {
+  if (swInterval) { clearInterval(swInterval); swInterval = null; }
+}
+
+// ══════════════════════════════════════════════════════
+// ACTIONS (Firebase writes)
+// ══════════════════════════════════════════════════════
+async function handleAdd() {
+  const name = document.getElementById("reg-name").value.trim();
+  const cat = document.getElementById("reg-cat").value;
+  if (!name) { showToast("يرجى إدخال الاسم","error"); return; }
+  const exists = Object.values(competitors).some(c => c.name.trim() === name);
+  if (exists) { showToast("المتسابق مسجل مسبقاً","error"); return; }
+  setBtnLoading("reg-add-btn", true);
+  try {
+    const {db, ref, push, set} = window._fb;
+    const newRef = push(ref(db, "competitors"));
+    const comp = {
+      id: newRef.key, name, category: cat, checkedIn: false,
+      checkInTime: null, queuePosition: null, status: "registered", createdAt: Date.now()
+    };
+    await set(newRef, comp);
+    document.getElementById("reg-name").value = "";
+    showToast("تم تسجيل "+name, "success");
+    addLog("تسجيل جديد: "+name+" ("+cat+")", "success");
+    if (settings.soundEnabled) playSound("success");
+  } catch(e) { showToast(e.message||"خطأ","error"); }
+  setBtnLoading("reg-add-btn", false);
+}
+
+// File import data storage
+let importedRows = []; // [{name, category}]
+
+function handleFileSelect(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const preview = document.getElementById("import-preview");
+  preview.textContent = "⏳ جاري قراءة الملف...";
+
+  const ext = file.name.split(".").pop().toLowerCase();
+
+  if (ext === "csv" || ext === "txt") {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const text = e.target.result;
+      parseCSVText(text);
+    };
+    reader.readAsText(file, "UTF-8");
+  } else if (ext === "xlsx" || ext === "xls") {
+    const reader = new FileReader();
+    reader.onload = e => {
+      try {
+        // Simple XLSX parser using raw binary
+        parseXLSXFile(e.target.result);
+      } catch(err) {
+        preview.textContent = "❌ خطأ في قراءة ملف Excel: " + err.message;
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  } else {
+    preview.textContent = "❌ صيغة الملف غير مدعومة. استخدم CSV أو Excel";
+  }
+}
+
+function parseCSVText(text) {
+  const lines = text.split(/\r?\n/).filter(l => l.trim());
+  importedRows = [];
+  for (const line of lines) {
+    // Support comma or tab separated
+    const parts = line.includes("\t") ? line.split("\t") : line.split(",");
+    const name = (parts[0]||"").trim();
+    const category = (parts[1]||"").trim();
+    if (name) importedRows.push({name, category: category || "عام"});
+  }
+  showImportPreview();
+}
+
+function parseXLSXFile(arrayBuffer) {
+  // We'll use a simple approach: load SheetJS from CDN dynamically
+  if (window.XLSX) {
+    doParseXLSX(arrayBuffer);
+    return;
+  }
+  const script = document.createElement("script");
+  script.src = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
+  script.onload = () => doParseXLSX(arrayBuffer);
+  script.onerror = () => {
+    document.getElementById("import-preview").textContent = "❌ تعذّر تحميل مكتبة Excel. جرّب ملف CSV";
+  };
+  document.head.appendChild(script);
+}
+
+function doParseXLSX(arrayBuffer) {
+  try {
+    const wb = XLSX.read(arrayBuffer, {type:"array"});
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:""});
+    importedRows = [];
+    for (const row of rows) {
+      const name = String(row[0]||"").trim();
+      const category = String(row[1]||"").trim();
+      if (name) importedRows.push({name, category: category || "عام"});
+    }
+    showImportPreview();
+  } catch(e) {
+    document.getElementById("import-preview").textContent = "❌ خطأ: " + e.message;
+  }
+}
+
+function showImportPreview() {
+  const preview = document.getElementById("import-preview");
+  if (importedRows.length === 0) {
+    preview.textContent = "⚠️ لم يُعثر على بيانات في الملف";
+    return;
+  }
+  // Show first few names
+  const sample = importedRows.slice(0, 3).map(r => `${r.name} (${r.category})`).join(" | ");
+  const more = importedRows.length > 3 ? ` ... و${importedRows.length - 3} آخرون` : "";
+  preview.innerHTML = `✅ <strong style="color:var(--success)">${importedRows.length}</strong> متسابق جاهز للاستيراد<br><span style="color:var(--text-subtle)">${sample}${more}</span>`;
+}
+
+async function handleImport() {
+  if (importedRows.length === 0) {
+    showToast("اختر ملفاً أولاً", "error");
+    return;
+  }
+  const existing = new Set(Object.values(competitors).map(c => c.name.trim()));
+  const {db, ref, push, set} = window._fb;
+  let added = 0;
+  for (const row of importedRows) {
+    if (!row.name || existing.has(row.name)) continue;
+    const newRef = push(ref(db, "competitors"));
+    const comp = {
+      id: newRef.key, name: row.name, category: row.category, checkedIn: false,
+      checkInTime: null, queuePosition: null, status: "registered", createdAt: Date.now() + added
+    };
+    await set(newRef, comp);
+    existing.add(row.name);
+    added++;
+  }
+  importedRows = [];
+  document.getElementById("reg-file").value = "";
+  document.getElementById("import-preview").textContent = "";
+  showToast("تم استيراد "+added+" متسابق", "success");
+  addLog("استيراد ملف: "+added+" متسابق", "success");
+}
+
+async function deleteComp(id, name) {
+  if (!confirm("حذف "+name+"؟")) return;
+  const {db, ref, remove} = window._fb;
+  try {
+    await remove(ref(db, "competitors/"+id));
+    showToast("تم حذف "+name, "info");
+    addLog("حذف: "+name, "warning");
+  } catch(e) { showToast(e.message,"error"); }
+}
+
+function openEdit(id) {
+  const c = competitors[id];
+  if (!c) return;
+  const name = prompt("الاسم الجديد:", c.name);
+  if (!name || !name.trim()) return;
+  const catOptions = settings.categories.join(", ");
+  let cat = prompt("الفئة الجديدة ("+catOptions+"):", c.category);
+  if (!cat) cat = c.category;
+  const {db, ref, update} = window._fb;
+  update(ref(db, "competitors/"+id), {name: name.trim(), category: cat.trim()})
+    .then(() => showToast("تم الحفظ","success"))
+    .catch(e => showToast(e.message,"error"));
+}
+
+async function checkIn(id) {
+  const comp = competitors[id];
+  if (!comp) return;
+  if (comp.checkedIn) { showToast("سبق تسجيل الحضور","error"); return; }
+  const queueLen = Object.values(competitors).filter(c => c.status === "waiting").length;
+  const position = queueLen + 1;
+  const {db, ref, update} = window._fb;
+  try {
+    await update(ref(db, "competitors/"+id), {
+      checkedIn: true, checkInTime: Date.now(),
+      queuePosition: position, status: "waiting"
+    });
+    await update(ref(db, "appState"), {
+      queueCounter: (appState.queueCounter||0)+1, lastUpdated: Date.now()
+    });
+    addLog("حضور: "+comp.name+" (#"+position+")", "success");
+    if (settings.soundEnabled) playSound("checkin");
+    showToast("تم تسجيل حضور "+comp.name, "success");
+  } catch(e) { showToast(e.message,"error"); }
+}
+
+async function callNext() {
+  const {db, ref, update} = window._fb;
+  if (appState.currentCompetitorId) {
+    await update(ref(db, "competitors/"+appState.currentCompetitorId), {status:"done"});
+    const cur = competitors[appState.currentCompetitorId];
+    if (cur) addLog("انتهى: "+cur.name, "success");
+  }
+  const waiting = getWaitingQueue();
+  if (waiting.length === 0) {
+    await update(ref(db, "appState"), {
+      currentCompetitorId: null, stopwatchStartedAt: null,
+      stopwatchElapsed: 0, stopwatchRunning: false,
+      lastUpdated: Date.now(), displayMessage: "انتهت جميع الأدوار 🏆"
+    });
+    addLog("انتهت قائمة الانتظار", "info");
+    showToast("انتهت قائمة الانتظار 🎉", "info");
+    return;
+  }
+  const next = waiting[0];
+  await update(ref(db, "competitors/"+next.id), {status:"current"});
+  await update(ref(db, "appState"), {
+    currentCompetitorId: next.id, stopwatchStartedAt: Date.now(),
+    stopwatchElapsed: 0, stopwatchRunning: true,
+    lastUpdated: Date.now(), displayMessage: ""
+  });
+  addLog("استدعاء: "+next.name+" (#"+next.queuePosition+")", "info");
+  if (settings.soundEnabled) playSound("call");
+}
+
+async function skipCurrent() {
+  if (!appState.currentCompetitorId) return;
+  if (!confirm("تخطّي المتسابق الحالي؟")) return;
+  const comp = competitors[appState.currentCompetitorId];
+  const {db, ref, update} = window._fb;
+  await update(ref(db, "competitors/"+appState.currentCompetitorId), {status:"skipped"});
+  addLog("تخطّي: "+(comp?comp.name:""), "warning");
+  if (settings.soundEnabled) playSound("skip");
+  await update(ref(db, "appState"), {
+    currentCompetitorId: null, stopwatchRunning: false, lastUpdated: Date.now()
+  });
+  setTimeout(() => callNext(), 300);
+}
+
+async function toggleStopwatch() {
+  const {db, ref, update} = window._fb;
+  if (appState.stopwatchRunning) {
+    const elapsed = appState.stopwatchStartedAt
+      ? appState.stopwatchElapsed + (Date.now() - appState.stopwatchStartedAt)
+      : appState.stopwatchElapsed;
+    await update(ref(db, "appState"), {
+      stopwatchRunning: false, stopwatchElapsed: elapsed,
+      stopwatchStartedAt: null, lastUpdated: Date.now()
+    });
+  } else {
+    await update(ref(db, "appState"), {
+      stopwatchRunning: true, stopwatchStartedAt: Date.now(), lastUpdated: Date.now()
+    });
+  }
+}
+
+async function resetStopwatch() {
+  const {db, ref, update} = window._fb;
+  await update(ref(db, "appState"), {
+    stopwatchRunning: false, stopwatchElapsed: 0,
+    stopwatchStartedAt: null, lastUpdated: Date.now()
+  });
+}
+
+// ── SETTINGS ──
+const settingsForm = {};
+
+function syncSettingsUI() {
+  val("s-comp-name", settings.compName);
+  val("s-cats", settings.categories.join("\n"));
+  updateVolLabel(settings.volume);
+  toggleEl("snd-toggle", settings.soundEnabled);
+  toggleEl("theme-toggle", settings.theme==="dark");
+  toggleEl("shownext-toggle", settings.showNextOnDisplay);
+  buildAccentPresets();
+  buildCatSelect();
+  document.getElementById("hdr-comp-name").textContent = settings.compName;
+
+  // Logo preview
+  const logoWrap = document.getElementById("logo-icon-wrap");
+  const logoPreview = document.getElementById("s-logo-preview");
+  if (settings.logoDataUrl) {
+    logoWrap.innerHTML = `<img src="${settings.logoDataUrl}" class="logo-img">`;
+    if (logoPreview) logoPreview.innerHTML = `<img src="${settings.logoDataUrl}" style="height:40px;border-radius:6px;margin-top:4px">`;
+  } else {
+    logoWrap.innerHTML = "🏆";
+    if (logoPreview) logoPreview.innerHTML = "";
+  }
+
+  // Bg
+  if (settings.bgDataUrl) {
+    document.body.style.backgroundImage = `url(${settings.bgDataUrl})`;
+    document.body.style.backgroundSize = "cover";
+    document.body.style.backgroundPosition = "center";
+    document.body.style.backgroundAttachment = "fixed";
+    const p = document.getElementById("s-bg-preview");
+    if (p) p.textContent = "✅ تم تعيين خلفية الموقع";
+  } else {
+    document.body.style.backgroundImage = "";
+    const p = document.getElementById("s-bg-preview");
+    if (p) p.textContent = "";
+  }
+  if (settings.displayBgDataUrl) {
+    const p = document.getElementById("s-dispbg-preview");
+    if (p) p.textContent = "✅ تم تعيين خلفية شاشة العرض";
+  }
+
+  // Settings stats
+  const list = getCompList();
+  document.getElementById("settings-stats").innerHTML = `
+    <div class="stat-card"><div class="stat-icon">👥</div><div class="stat-value">${list.length}</div><div class="stat-label">مسجلون</div></div>
+    <div class="stat-card" style="border-color:var(--warning)33"><div class="stat-icon">⏳</div><div class="stat-value" style="color:var(--warning)">${getWaitingQueue().length}</div><div class="stat-label">ينتظرون</div></div>
+    <div class="stat-card" style="border-color:var(--success)33"><div class="stat-icon">✅</div><div class="stat-value" style="color:var(--success)">${getDoneList().length}</div><div class="stat-label">انتهوا</div></div>
+    <div class="stat-card" style="border-color:var(--danger)33"><div class="stat-icon">⏭️</div><div class="stat-value" style="color:var(--danger)">${getSkippedList().length}</div><div class="stat-label">تخطّوا</div></div>
+  `;
+}
+
+function buildCatSelect() {
+  const sel = document.getElementById("reg-cat");
+  if (!sel) return;
+  sel.innerHTML = settings.categories.map(c => `<option value="${c}">${c}</option>`).join("");
+}
+
+function buildAccentPresets() {
+  const el = document.getElementById("accent-presets");
+  if (!el) return;
+  el.innerHTML = ACCENT_PRESETS.map(p => `
+    <div class="color-preset${settings.accentColor===p.color?" active":""}" onclick="setAccent('${p.color}')" style="${settings.accentColor===p.color?"border-color:"+p.color+";color:"+p.color:""}">
+      <div class="color-dot" style="background:${p.color}"></div>${p.name}
+    </div>
+  `).join("");
+}
+
+function setAccent(color) {
+  settings.accentColor = color;
+  applyTheme();
+  buildAccentPresets();
+  val("s-accent", color);
+}
+
+function updateVolLabel(v) {
+  const el = document.getElementById("vol-label");
+  if (el) el.textContent = "مستوى الصوت: "+Math.round(v*100)+"%";
+}
+
+function toggleSetting(key) {
+  if (key === "theme") {
+    settings.theme = settings.theme === "dark" ? "light" : "dark";
+    applyTheme();
+    toggleEl("theme-toggle", settings.theme === "dark");
+    document.getElementById("theme-btn").textContent = settings.theme === "dark" ? "☀️" : "🌙";
+  } else if (key === "soundEnabled") {
+    settings.soundEnabled = !settings.soundEnabled;
+    toggleEl("snd-toggle", settings.soundEnabled);
+  } else if (key === "showNextOnDisplay") {
+    settings.showNextOnDisplay = !settings.showNextOnDisplay;
+    toggleEl("shownext-toggle", settings.showNextOnDisplay);
+  }
+}
+
+async function saveSettings() {
+  settings.compName = gval("s-comp-name");
+  settings.categories = gval("s-cats").split("\n").filter(Boolean);
+  settings.volume = parseFloat(gval("s-vol"));
+  settings.accentColor = gval("s-accent");
+  const {db, ref, set} = window._fb;
+  // Note: image data URLs are stored in settings object already via upload handlers
+  // We save everything except large data URLs to Firebase (store locally only)
+  const fbSettings = {...settings};
+  delete fbSettings.logoDataUrl;
+  delete fbSettings.bgDataUrl;
+  delete fbSettings.displayBgDataUrl;
+  try {
+    await set(ref(db, "settings"), fbSettings);
+    showToast("تم حفظ الإعدادات ✅", "success");
+    addLog("تم حفظ الإعدادات", "info");
+    syncSettingsUI();
+    buildCatSelect();
+  } catch(e) { showToast("خطأ في الحفظ","error"); }
+}
+
+// ── IMAGE UPLOAD HANDLERS ──
+function handleLogoUpload(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    settings.logoDataUrl = e.target.result;
+    syncSettingsUI();
+    showToast("تم تحميل الشعار", "success");
+  };
+  reader.readAsDataURL(file);
+}
+
+function handleBgUpload(input, type) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    if (type === "bg") {
+      settings.bgDataUrl = e.target.result;
+      document.body.style.backgroundImage = `url(${e.target.result})`;
+      document.body.style.backgroundSize = "cover";
+      document.body.style.backgroundPosition = "center";
+      document.body.style.backgroundAttachment = "fixed";
+      const p = document.getElementById("s-bg-preview");
+      if (p) p.textContent = "✅ تم تعيين خلفية الموقع";
+    } else {
+      settings.displayBgDataUrl = e.target.result;
+      const p = document.getElementById("s-dispbg-preview");
+      if (p) p.textContent = "✅ تم تعيين خلفية شاشة العرض";
+    }
+    showToast("تم تحميل الصورة", "success");
+  };
+  reader.readAsDataURL(file);
+}
+
+async function resetAll() {
+  if (!confirm("سيتم حذف جميع البيانات نهائياً. هل أنت متأكد؟")) return;
+  const {db, ref, set} = window._fb;
+  await set(ref(db, "competitors"), null);
+  await set(ref(db, "logs"), null);
+  await set(ref(db, "appState"), {
+    currentCompetitorId:null,stopwatchStartedAt:null,stopwatchElapsed:0,
+    stopwatchRunning:false,queueCounter:0,lastUpdated:Date.now(),displayMessage:""
+  });
+  showToast("تم إعادة ضبط كاملة","warning");
+  addLog("إعادة ضبط كاملة","warning");
+}
+
+async function resetCheckin() {
+  if (!confirm("إعادة ضبط الحضور فقط؟")) return;
+  const {db, ref, update} = window._fb;
+  const updates = {};
+  Object.values(competitors).forEach(c => {
+    updates["competitors/"+c.id+"/checkedIn"] = false;
+    updates["competitors/"+c.id+"/checkInTime"] = null;
+    updates["competitors/"+c.id+"/queuePosition"] = null;
+    updates["competitors/"+c.id+"/status"] = "registered";
+  });
+  updates["appState"] = {
+    currentCompetitorId:null,stopwatchStartedAt:null,stopwatchElapsed:0,
+    stopwatchRunning:false,queueCounter:0,lastUpdated:Date.now(),displayMessage:""
+  };
+  await update(ref(db), updates);
+  showToast("تم إعادة ضبط الحضور","warning");
+  addLog("إعادة ضبط الحضور","warning");
+}
+
+async function addLog(message, type="info") {
+  const {db, ref, push} = window._fb;
+  push(ref(db, "logs"), {message, type, timestamp: Date.now()}).catch(()=>{});
+}
+
+// ══════════════════════════════════════════════════════
+// THEME
+// ══════════════════════════════════════════════════════
+function applyTheme() {
+  const root = document.documentElement;
+  const dark = settings.theme === "dark";
+  root.setAttribute("data-theme", settings.theme);
+  const accent = settings.accentColor || "#f59e0b";
+  root.style.setProperty("--accent", accent);
+  root.style.setProperty("--accent-muted", hexToRgba(accent, 0.12));
+  // accent-text: white for dark theme, dark for light theme
+  root.style.setProperty("--accent-text", dark ? "#1a0f00" : "#1a0f00");
+  const themeBtn = document.getElementById("theme-btn");
+  if (themeBtn) themeBtn.textContent = dark ? "☀️" : "🌙";
+  val("s-accent", accent);
+}
+
+function hexToRgba(hex, alpha) {
+  try {
+    const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
+    return `rgba(${r},${g},${b},${alpha})`;
+  } catch { return hex; }
+}
+
+// ══════════════════════════════════════════════════════
+// DISPLAY PAGE (new window)
+// ══════════════════════════════════════════════════════
+let displayWindow = null;
+let displaySWInterval = null;
+
+function buildDisplayHTML() {
+  const accentColor = settings.accentColor || "#f59e0b";
+  const dispBg = settings.displayBgDataUrl || "";
+  const bgStyle = dispBg
+    ? `background-image:url(${dispBg});background-size:cover;background-position:center;background-repeat:no-repeat;`
+    : `background:radial-gradient(ellipse at 20% 50%,#0f172a 0%,#020617 100%);`;
+
+  return `<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>شاشة العرض - ${settings.compName}</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet"/>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.55}}
+  @keyframes glow-pulse{0%,100%{box-shadow:0 0 20px ${accentColor}33}50%{box-shadow:0 0 60px ${accentColor}55}}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+  body{
+    font-family:'Cairo',sans-serif;direction:rtl;
+    min-height:100vh;${bgStyle}
+    display:flex;align-items:center;justify-content:center;
+    flex-direction:column;text-align:center;overflow:hidden;padding:40px;
+    position:relative;
+  }
+  body::before{content:'';position:fixed;inset:0;background:rgba(0,0,0,0.45);pointer-events:none;z-index:0}
+  #display-ambient{position:fixed;inset:0;pointer-events:none;transition:background 1s;z-index:1}
+  #display-flash{position:fixed;inset:0;background:${accentColor}22;pointer-events:none;z-index:2;display:none}
+  #display-clock{position:fixed;top:24px;left:32px;font-size:16px;color:rgba(255,255,255,.5);font-weight:500;z-index:10}
+  #display-logo-area{position:fixed;top:24px;right:32px;display:flex;align-items:center;gap:12px;z-index:10}
+  #display-comp-name-text{font-size:16px;font-weight:700;color:rgba(255,255,255,.6)}
+  #display-logo-img{width:42px;height:42px;border-radius:10px;object-fit:contain;display:none}
+  #display-content{max-width:900px;width:100%;position:relative;z-index:5;animation:fadeIn .5s ease both}
+  #display-num{
+    font-size:clamp(100px,18vw,200px);font-weight:900;color:${accentColor};
+    line-height:1;margin-bottom:8px;
+    text-shadow:0 0 80px ${accentColor}55;animation:glow-pulse 3s infinite;
+  }
+  #display-name{font-size:clamp(32px,5.5vw,72px);font-weight:900;color:white;margin-bottom:6px;line-height:1.2}
+  #display-cat{font-size:clamp(16px,2.5vw,28px);color:rgba(255,255,255,.5);margin-bottom:36px}
+  #display-sw-wrap{display:inline-block;border-radius:16px;padding:14px 40px;margin-bottom:40px}
+  #display-sw-label{font-size:12px;letter-spacing:3px;margin-bottom:4px;text-transform:uppercase;color:rgba(255,255,255,.4)}
+  #display-sw{font-family:monospace;font-size:clamp(32px,6vw,64px);font-weight:900;letter-spacing:4px;color:${accentColor};transition:color .5s}
+  #display-idle{text-align:center;position:relative;z-index:5;animation:fadeIn .5s ease both}
+  #display-idle-icon{font-size:clamp(80px,14vw,160px);opacity:.2;margin-bottom:24px}
+  #display-idle-msg{font-size:clamp(24px,4vw,50px);color:rgba(255,255,255,.35);font-weight:700}
+  #display-idle-count{font-size:clamp(14px,2vw,22px);color:rgba(255,255,255,.2);margin-top:16px}
+  #display-bottom-info{display:flex;gap:16px;justify-content:center;flex-wrap:wrap}
+  .display-info-box{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:12px 28px;font-size:clamp(14px,2vw,20px);color:white}
+  .display-info-label{color:rgba(255,255,255,.35);font-size:.75em;margin-bottom:3px}
+  #display-bottom-bar{position:fixed;bottom:0;left:0;right:0;height:3px;background:linear-gradient(90deg,transparent,${accentColor},transparent);opacity:.5;z-index:10}
+  #unlock-overlay{display:flex;position:fixed;inset:0;z-index:500;background:rgba(2,6,23,.9);align-items:center;justify-content:center;flex-direction:column;gap:20px;cursor:pointer}
+  #unlock-overlay .u-icon{font-size:72px;opacity:.3}
+  #unlock-overlay .u-msg{font-size:22px;color:rgba(255,255,255,.4)}
+  #close-btn{position:fixed;top:16px;left:50%;transform:translateX(-50%);background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:white;border-radius:8px;padding:6px 14px;cursor:pointer;font-family:inherit;font-size:13px;z-index:600;display:none}
+</style>
+</head>
+<body>
+<div id="unlock-overlay" onclick="doUnlock()">
+  <div class="u-icon">🏆</div>
+  <div class="u-msg">اضغط لتفعيل شاشة العرض</div>
+</div>
+<button id="close-btn" onclick="window.close()">✕ إغلاق</button>
+<div id="display-ambient"></div>
+<div id="display-flash"></div>
+<div id="display-clock"></div>
+<div id="display-logo-area">
+  <div id="display-comp-name-text">${settings.compName}</div>
+  ${settings.logoDataUrl ? `<img id="display-logo-img" src="${settings.logoDataUrl}" style="display:block">` : ""}
+</div>
+<div id="display-content" style="display:none">
+  <div style="font-size:16px;letter-spacing:6px;text-transform:uppercase;color:rgba(255,255,255,.4);margin-bottom:12px;font-weight:600">المتسابق الحالي</div>
+  <div id="display-num"></div>
+  <div id="display-name"></div>
+  <div id="display-cat"></div>
+  <div id="display-sw-wrap">
+    <div id="display-sw-label"></div>
+    <div id="display-sw"></div>
+  </div>
+  <div id="display-bottom-info"></div>
+</div>
+<div id="display-idle">
+  <div id="display-idle-icon">🏆</div>
+  <div id="display-idle-msg">في انتظار المتسابق</div>
+  <div id="display-idle-count"></div>
+</div>
+<div id="display-bottom-bar"></div>
+<script>
+  let unlocked = false;
+  function doUnlock() {
+    document.getElementById("unlock-overlay").style.display = "none";
+    document.getElementById("close-btn").style.display = "";
+    unlocked = true;
+    if (window.opener && window.opener._displayPing) window.opener._displayPing();
+  }
+  function tick() {
+    const el = document.getElementById("display-clock");
+    if (el) el.textContent = new Date().toLocaleTimeString("ar-SA",{hour:"2-digit",minute:"2-digit",second:"2-digit",hour12:true});
+  }
+  tick(); setInterval(tick, 1000);
+
+  function formatTime(ms) {
+    const total = Math.floor(ms / 1000);
+    const h = Math.floor(total / 3600);
+    const m = Math.floor((total % 3600) / 60);
+    const s = total % 60;
+    if (h > 0) return String(h).padStart(2,"0")+":"+String(m).padStart(2,"0")+":"+String(s).padStart(2,"0");
+    return String(m).padStart(2,"0")+":"+String(s).padStart(2,"0");
+  }
+
+  window._updateDisplay = function(data) {
+    const {current, next, waitingCount, elapsed, swRunning, accentColor, showNext, displayMessage, swStartedAt, swElapsed} = data;
+    // Recalc elapsed
+    let realElapsed = swElapsed || 0;
+    if (swRunning && swStartedAt) realElapsed += (Date.now() - swStartedAt);
+    const totalSec = Math.floor(realElapsed / 1000);
+    const swColor = totalSec > 600 ? "#f43f5e" : totalSec > 300 ? "#f59e0b" : "#60a5fa";
+
+    document.getElementById("display-ambient").style.background = current
+      ? "radial-gradient(ellipse at 50% 30%,rgba(245,158,11,0.10) 0%,transparent 60%)"
+      : "radial-gradient(ellipse at 50% 30%,rgba(96,165,250,0.05) 0%,transparent 60%)";
+
+    if (current) {
+      document.getElementById("display-content").style.display = "";
+      document.getElementById("display-idle").style.display = "none";
+      document.getElementById("display-num").textContent = "#"+current.queuePosition;
+      document.getElementById("display-name").textContent = current.name;
+      document.getElementById("display-cat").textContent = current.category;
+      const sw = document.getElementById("display-sw");
+      sw.textContent = formatTime(realElapsed);
+      sw.style.color = swColor;
+      sw.style.animation = totalSec > 600 ? "pulse 1s infinite" : "";
+      const wrap = document.getElementById("display-sw-wrap");
+      wrap.style.background = swColor+"11";
+      wrap.style.border = "1px solid "+swColor+"44";
+      document.getElementById("display-sw-label").textContent = "⏱ عداد الوقت";
+      let bottomHtml = "";
+      if (showNext && next) bottomHtml += '<div class="display-info-box"><div class="display-info-label">التالي</div><div style="color:#60a5fa;font-weight:700">'+next.name+'</div></div>';
+      bottomHtml += '<div class="display-info-box"><div class="display-info-label">في الانتظار</div><div style="color:#f59e0b;font-weight:700">'+waitingCount+'</div></div>';
+      document.getElementById("display-bottom-info").innerHTML = bottomHtml;
+    } else {
+      document.getElementById("display-content").style.display = "none";
+      document.getElementById("display-idle").style.display = "";
+      document.getElementById("display-idle-msg").textContent = displayMessage || "في انتظار المتسابق";
+      document.getElementById("display-idle-count").textContent = waitingCount > 0 ? waitingCount+" متسابق ينتظر دوره" : "";
+    }
+  };
+<\/script>
+</body>
+</html>`;
+}
+
+function openDisplay() {
+  if (displayWindow && !displayWindow.closed) {
+    displayWindow.focus();
+    pushDisplayData();
+    return;
+  }
+  const html = buildDisplayHTML();
+  displayWindow = window.open("", "_blank", "width=1280,height=720,menubar=no,toolbar=no,location=no,status=no");
+  if (!displayWindow) {
+    showToast("تعذّر فتح نافذة جديدة. يرجى السماح بالنوافذ المنبثقة", "error");
+    return;
+  }
+  displayWindow.document.open();
+  displayWindow.document.write(html);
+  displayWindow.document.close();
+
+  // Start pushing updates
+  if (displaySWInterval) clearInterval(displaySWInterval);
+  displaySWInterval = setInterval(pushDisplayData, 1000);
+}
+
+window._displayPing = function() {
+  // Called when display window unlocks
+};
+
+function pushDisplayData() {
+  if (!displayWindow || displayWindow.closed) {
+    if (displaySWInterval) { clearInterval(displaySWInterval); displaySWInterval = null; }
+    return;
+  }
+  try {
+    if (displayWindow._updateDisplay) {
+      const current = getCurrentComp();
+      const next = getNextComp();
+      const waiting = getWaitingQueue();
+      displayWindow._updateDisplay({
+        current,
+        next,
+        waitingCount: waiting.length,
+        showNext: settings.showNextOnDisplay,
+        displayMessage: appState.displayMessage || "",
+        accentColor: settings.accentColor || "#f59e0b",
+        swRunning: appState.stopwatchRunning,
+        swStartedAt: appState.stopwatchStartedAt,
+        swElapsed: appState.stopwatchElapsed,
+      });
+    }
+  } catch(e) { /* cross-origin or closed */ }
+}
+
+// Keep old stubs so nothing breaks
+function closeDisplay() {
+  if (displayWindow && !displayWindow.closed) displayWindow.close();
+  if (displaySWInterval) { clearInterval(displaySWInterval); displaySWInterval = null; }
+}
+function unlockDisplay() {}
+function updateDisplayUI() { pushDisplayData(); }
+function updateDisplaySW() { pushDisplayData(); }
+function startDisplayClock() {}
+
+document.getElementById("open-display-btn").onclick = openDisplay;
+
+// ══════════════════════════════════════════════════════
+// AUDIO (Web Audio API)
+// ══════════════════════════════════════════════════════
+let audioCtx = null;
+function getAC() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === "suspended") audioCtx.resume();
+  return audioCtx;
+}
+function unlockAudio() {
+  try { getAC(); } catch(_) {}
+}
+
+function playSound(type) {
+  if (!settings.soundEnabled && type !== undefined) {}
+  try {
+    const ac = getAC();
+    const t = ac.currentTime;
+    const vol = settings.volume || 0.7;
+    const master = ac.createGain();
+    master.gain.value = vol;
+    master.connect(ac.destination);
+
+    function tone(freq, oscType, start, dur, gs, ge) {
+      const o = ac.createOscillator(), g = ac.createGain();
+      o.connect(g); g.connect(master);
+      o.type = oscType; o.frequency.setValueAtTime(freq, start);
+      g.gain.setValueAtTime(gs, start);
+      g.gain.exponentialRampToValueAtTime(Math.max(ge,0.001), start+dur);
+      o.start(start); o.stop(start+dur+0.01);
+    }
+    function sweep(fs, fe, oscType, start, dur, gainVal) {
+      const o = ac.createOscillator(), g = ac.createGain();
+      o.connect(g); g.connect(master);
+      o.type = oscType;
+      o.frequency.setValueAtTime(fs, start);
+      o.frequency.exponentialRampToValueAtTime(fe, start+dur);
+      g.gain.setValueAtTime(gainVal, start);
+      g.gain.exponentialRampToValueAtTime(0.001, start+dur);
+      o.start(start); o.stop(start+dur+0.02);
+    }
+
+    switch(type) {
+      case "call":
+        [523,659,784].forEach((f,i)=>{
+          sweep(f*.8,f,"sine",t+i*.18,.35,.6);
+          tone(f,"sine",t+i*.18,.5,.3,.001);
+          tone(f*2,"sine",t+i*.18,.3,.1,.001);
+        });
+        [784,988,1175].forEach(f=>tone(f,"sine",t+.55,.8,.25,.001));
+        break;
+      case "checkin":
+        sweep(660,880,"sine",t,.15,.5);
+        tone(880,"sine",t+.12,.4,.4,.001);
+        tone(1320,"sine",t+.12,.3,.15,.001);
+        break;
+      case "next":
+        sweep(440,660,"sine",t+.03,.25,.5);
+        tone(660,"sine",t+.25,.35,.35,.001);
+        break;
+      case "skip":
+        sweep(400,180,"sine",t,.3,.4);
+        tone(200,"triangle",t,.25,.2,.001);
+        break;
+      case "success":
+        [523,659,784,1047].forEach((f,i)=>tone(f,"sine",t+i*.1,.35,.4,.001));
+        break;
+      case "milestone":
+        sweep(880,1100,"sine",t,.1,.3);
+        tone(1100,"sine",t+.08,.6,.2,.001);
+        tone(1650,"sine",t+.08,.45,.1,.001);
+        break;
+    }
+  } catch(e) { console.warn("Audio error:",e); }
+}
+
+// ══════════════════════════════════════════════════════
+// UI HELPERS
+// ══════════════════════════════════════════════════════
+function showToast(msg, type="info") {
+  const icons = {success:"✅",error:"❌",info:"ℹ️",warning:"⚠️"};
+  const colors = {success:"var(--success)",error:"var(--danger)",info:"var(--info)",warning:"var(--warning)"};
+  const el = document.createElement("div");
+  el.className = "toast";
+  el.style.borderColor = colors[type]+"44";
+  el.innerHTML = `<span>${icons[type]||"ℹ️"}</span><span style="color:var(--text)">${msg}</span>`;
+  const container = document.getElementById("toast-container");
+  container.prepend(el);
+  setTimeout(() => el.remove(), 4000);
+}
+
+function toggleEl(id, on) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (on) el.classList.add("on"); else el.classList.remove("on");
+}
+
+function val(id, v) {
+  const el = document.getElementById(id);
+  if (el) el.value = v != null ? v : "";
+}
+function gval(id) {
+  const el = document.getElementById(id);
+  return el ? el.value : "";
+}
+
+function setBtnLoading(id, loading) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.disabled = loading;
+  if (loading) el.innerHTML = `<span class="spin">⟳</span> جاري...`;
+  else el.innerHTML = "➕ إضافة متسابق";
+}
+
+// ══════════════════════════════════════════════════════
+// SCROLL HEADER EFFECT
+// ══════════════════════════════════════════════════════
+window.addEventListener("scroll", () => {
+  document.getElementById("header").classList.toggle("scrolled", window.scrollY > 10);
+});
+
+// ══════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════
+buildTabs();
+applyTheme();
+syncSettingsUI();
+buildCatSelect();
+renderAll();
+
+// Theme toggle button
+document.getElementById("theme-btn").onclick = () => toggleSetting("theme");
+
+// Click anywhere to unlock audio
+document.addEventListener("click", unlockAudio, {once:true});
+
+// Enter key on reg name
+document.getElementById("reg-name").addEventListener("keydown", e => {
+  if (e.key === "Enter") handleAdd();
+});
+</script>
+</body>
+</html>
