@@ -1,0 +1,1066 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" data-theme="dark">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>نظام إدارة المسابقة</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet"/>
+<script type="module">
+  import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import{getDatabase,ref,set,push,onValue,off,remove,update}from"https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+  const cfg={
+    apiKey:"AIzaSyAnq0Z-2Rj3OcM7wICylOnU29zCqR6_Xeo",
+    authDomain:"competitors-4d38c.firebaseapp.com",
+    projectId:"competitors-4d38c",
+    databaseURL:"https://competitors-4d38c-default-rtdb.firebaseio.com",
+    storageBucket:"competitors-4d38c.firebasestorage.app",
+    messagingSenderId:"639845517789",
+    appId:"1:639845517789:web:fff8a8be6308d7ade4ce34"
+  };
+  const app=initializeApp(cfg);
+  const db=getDatabase(app);
+  window._fb={db,ref,set,push,onValue,off,remove,update};
+  window.dispatchEvent(new Event("fb-ready"));
+</script>
+<style>
+:root{
+  --bg:#0b0f1a;--surface:#161d2e;--surface2:#1e2840;
+  --border:rgba(255,255,255,.07);--border-strong:rgba(255,255,255,.15);
+  --text:#e8eaf0;--muted:#7c8aa0;--subtle:#4a5568;
+  --accent:#f59e0b;--accent-m:rgba(245,158,11,.12);--accent-t:#1a0f00;
+  --ok:#10b981;--ok-m:rgba(16,185,129,.12);
+  --err:#f43f5e;--err-m:rgba(244,63,94,.12);
+  --warn:#f59e0b;--warn-m:rgba(245,158,11,.12);
+  --info:#60a5fa;--info-m:rgba(96,165,250,.12);
+  --r:10px;--rs:6px;--rl:14px;
+  --sh:0 4px 20px rgba(0,0,0,.4);--sh-s:0 2px 8px rgba(0,0,0,.3);
+}
+[data-theme="light"]{
+  --bg:#f0f4ff;--surface:#fff;--surface2:#f5f7ff;
+  --border:rgba(0,0,0,.08);--border-strong:rgba(0,0,0,.18);
+  --text:#1a1f36;--muted:#5a6480;--subtle:#9aa0b5;
+  --accent:#d97706;--accent-m:rgba(217,119,6,.1);--accent-t:#fff8e0;
+  --ok:#059669;--ok-m:rgba(5,150,105,.1);
+  --err:#e11d48;--err-m:rgba(225,29,72,.1);
+  --warn:#d97706;--warn-m:rgba(217,119,6,.1);
+  --info:#2563eb;--info-m:rgba(37,99,235,.1);
+  --sh:0 4px 20px rgba(0,0,0,.1);--sh-s:0 2px 8px rgba(0,0,0,.08);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--text);direction:rtl;min-height:100vh;line-height:1.6;-webkit-font-smoothing:antialiased;transition:background .3s,color .3s}
+::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--border-strong);border-radius:3px}
+input,select,textarea,button{font-family:inherit;font-size:14px}
+input,select,textarea{background:var(--surface2);border:1px solid var(--border-strong);border-radius:var(--r);color:var(--text);padding:10px 14px;outline:none;width:100%;direction:rtl;transition:border-color .15s,box-shadow .15s}
+input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-m)}
+input::placeholder,textarea::placeholder{color:var(--subtle)}
+select option{background:var(--surface2)}
+input[type="color"]{width:44px;height:36px;padding:3px;cursor:pointer}
+input[type="range"]{-webkit-appearance:none;height:4px;background:var(--border-strong);border:none;border-radius:2px;padding:0;cursor:pointer}
+input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;background:var(--accent);border-radius:50%;cursor:pointer}
+input[type="file"]{padding:8px;cursor:pointer}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+@keyframes spin{to{transform:rotate(360deg)}}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.fcol{display:flex;flex-direction:column;gap:16px}
+@media(max-width:768px){.g2,.g3{grid-template-columns:1fr}}
+#hdr{position:sticky;top:0;z-index:100;background:var(--bg);border-bottom:1px solid var(--border);transition:all .25s}
+#hdr.scrolled{background:var(--surface);box-shadow:var(--sh)}
+.hdr-top{padding:10px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.logo-box{display:flex;align-items:center;gap:12px}
+.logo-icon{width:42px;height:42px;border-radius:10px;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;overflow:hidden}
+.logo-icon img{width:100%;height:100%;object-fit:contain}
+.logo-name{font-weight:900;font-size:17px;color:var(--accent)}
+.logo-sub{font-size:11px;color:var(--muted)}
+.hdr-right{display:flex;align-items:center;gap:10px}
+.conn{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:600}
+.dot{width:8px;height:8px;border-radius:50%}
+.dot.on{background:var(--ok);animation:pulse 2s infinite}.dot.off{background:var(--err)}
+.ibtn{background:var(--surface2);border:1px solid var(--border-strong);border-radius:var(--r);padding:7px 12px;cursor:pointer;font-size:15px;color:var(--text)}
+.dbtn{background:var(--accent);color:var(--accent-t);border:none;border-radius:var(--r);padding:7px 14px;cursor:pointer;font-size:13px;font-weight:700;font-family:inherit;display:flex;align-items:center;gap:6px}
+.tabs-nav{display:flex;overflow-x:auto;padding:0 12px;gap:2px;border-top:1px solid var(--border);background:var(--surface)}
+.tnav{padding:10px 16px;font-size:13px;font-weight:500;color:var(--muted);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:6px;transition:all .15s;font-family:inherit;flex-shrink:0}
+.tnav.on{color:var(--accent);font-weight:700;border-bottom-color:var(--accent)}
+.tbadge{background:var(--accent);color:var(--accent-t);border-radius:10px;padding:1px 7px;font-size:11px;font-weight:800}
+#main{max-width:1280px;margin:0 auto;padding:20px 20px 60px}
+.pane{display:none}.pane.on{display:block}
+.card{background:var(--surface);border:1px solid var(--border-strong);border-radius:var(--rl);overflow:hidden;box-shadow:var(--sh-s)}
+.card.glow{box-shadow:0 0 30px var(--accent-m)}
+.ch{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px;background:rgba(255,255,255,.02)}
+.ch-l{display:flex;align-items:center;gap:10px}
+.ch-icon{font-size:18px}.ch-title{font-weight:700;font-size:15px}
+.cb{padding:18px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:9px 18px;font-size:14px;font-weight:600;border-radius:var(--r);cursor:pointer;border:none;font-family:inherit;transition:all .15s;white-space:nowrap}
+.btn:disabled{cursor:not-allowed;opacity:.55}
+.bsm{padding:6px 12px;font-size:12px;gap:5px}.blg{padding:12px 24px;font-size:15px}.bfull{width:100%}
+.bp{background:var(--accent);color:var(--accent-t);font-weight:700}
+.bg{background:var(--surface2);color:var(--text);border:1px solid var(--border-strong)}
+.bd{background:var(--err-m);color:var(--err);border:1px solid var(--err)}
+.bs{background:var(--ok-m);color:var(--ok);border:1px solid var(--ok)}
+.spin-el{animation:spin 1s linear infinite;display:inline-block}
+.bdg{padding:2px 10px;border-radius:20px;font-size:12px;font-weight:600;white-space:nowrap;display:inline-flex;align-items:center}
+.ba{background:var(--accent-m);color:var(--accent);border:1px solid var(--accent)}
+.bsc{background:var(--ok-m);color:var(--ok);border:1px solid var(--ok)}
+.bdc{background:var(--err-m);color:var(--err);border:1px solid var(--err)}
+.bwc{background:var(--warn-m);color:var(--warn);border:1px solid var(--warn)}
+.bic{background:var(--info-m);color:var(--info);border:1px solid var(--info)}
+.bnc{background:var(--surface2);color:var(--muted);border:1px solid var(--border-strong)}
+.av{border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0}
+.av-a{background:var(--accent-m);border:1.5px solid var(--accent);color:var(--accent)}
+.av-s{background:var(--ok-m);border:1.5px solid var(--ok);color:var(--ok)}
+.av-i{background:var(--info-m);border:1.5px solid var(--info);color:var(--info)}
+.av-n{background:var(--surface2);border:1.5px solid var(--border-strong);color:var(--muted)}
+.tgl{width:44px;height:24px;border-radius:12px;position:relative;cursor:pointer;transition:all .2s;flex-shrink:0;background:var(--surface2);border:1px solid var(--border-strong)}
+.tgl.on{background:var(--ok);border-color:var(--ok)}
+.tgl-k{width:18px;height:18px;background:#fff;border-radius:9px;position:absolute;top:2px;left:2px;transition:all .2s;box-shadow:0 1px 4px rgba(0,0,0,.3)}
+.tgl.on .tgl-k{left:auto;right:2px}
+.prog{height:6px;background:var(--surface2);border-radius:3px;overflow:hidden}
+.prog-f{height:100%;background:var(--accent);border-radius:3px;transition:width .4s}
+.lbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--subtle);margin-bottom:6px}
+.row{display:flex;align-items:center;justify-content:space-between;padding:10px 4px;border-bottom:1px solid var(--border);gap:10px}
+.row:last-child{border-bottom:none}
+.empty{text-align:center;padding:40px 24px;color:var(--muted)}
+.sc{max-height:540px;overflow-y:auto}
+.sc-sm{max-height:220px;overflow-y:auto}
+.frow{display:flex;align-items:center;gap:10px}
+.divl{display:flex;align-items:center;gap:12px;margin:16px 0}
+.divl-l{flex:1;height:1px;background:var(--border)}
+.divl-t{font-size:12px;color:var(--subtle);white-space:nowrap}
+.stat-c{background:var(--surface2);border-radius:var(--r);padding:16px;text-align:center;border:1px solid var(--border)}
+.stat-v{font-size:28px;font-weight:900;line-height:1}
+.stat-lb{font-size:12px;color:var(--muted);margin-top:4px}
+/* Upload area */
+.upload-area{border:2px dashed var(--border-strong);border-radius:var(--r);padding:20px;text-align:center;cursor:pointer;transition:all .2s;position:relative;background:var(--surface2)}
+.upload-area:hover,.upload-area.drag{border-color:var(--accent);background:var(--accent-m)}
+.upload-area input[type="file"]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+/* Toast */
+#toast-box{position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:9999;display:flex;flex-direction:column;gap:8px;pointer-events:none;min-width:280px}
+.toast{background:var(--surface);border-radius:var(--r);padding:12px 16px;display:flex;align-items:center;gap:10px;box-shadow:var(--sh);font-weight:600;font-size:14px;animation:fadeIn .3s ease both}
+/* Color presets */
+.cpre{display:flex;align-items:center;gap:5px;padding:5px 10px;border-radius:var(--rs);border:2px solid transparent;cursor:pointer;background:var(--surface2);font-size:12px;font-weight:600;color:var(--muted);transition:all .15s}
+.cdot{width:12px;height:12px;border-radius:50%;flex-shrink:0}
+</style>
+</head>
+<body>
+<div id="toast-box"></div>
+
+<!-- HEADER -->
+<div id="hdr">
+  <div class="hdr-top">
+    <div class="logo-box">
+      <div class="logo-icon" id="logo-icon">🏆</div>
+      <div><div class="logo-name" id="hdr-name">بطولة المعرفة ٢٠٢٥</div><div class="logo-sub">لوحة إدارة المسابقة</div></div>
+    </div>
+    <div class="hdr-right">
+      <div class="conn"><div class="dot off" id="cdot"></div><span id="clbl" style="color:var(--err)">غير متصل</span></div>
+      <button class="ibtn" id="theme-btn" onclick="toggleTheme()">☀️</button>
+      <button class="dbtn" onclick="openDisplay()">📺 شاشة العرض</button>
+    </div>
+  </div>
+  <div class="tabs-nav" id="tabs-nav"></div>
+</div>
+
+<div id="main">
+
+<!-- TAB: المتسابقون -->
+<div class="pane on" id="pane-reg">
+  <div class="g2">
+    <div class="fcol">
+      <div class="card">
+        <div class="ch"><div class="ch-l"><span class="ch-icon">➕</span><span class="ch-title">إضافة متسابق</span></div></div>
+        <div class="cb fcol" style="gap:12px">
+          <div><div class="lbl">الاسم الكامل</div><input id="r-name" placeholder="اسم المتسابق..." onkeydown="if(event.key==='Enter')addComp()"/></div>
+          <div><div class="lbl">الفئة</div><select id="r-cat"></select></div>
+          <button class="btn bp bfull" id="r-add-btn" onclick="addComp()">➕ إضافة متسابق</button>
+          <div class="divl"><div class="divl-l"></div><span class="divl-t">استيراد ملف CSV</span><div class="divl-l"></div></div>
+          <p style="font-size:12px;color:var(--muted)">الملف يحتوي على: <code style="color:var(--accent)">الاسم,الفئة</code> — سطر لكل متسابق</p>
+          <div class="upload-area" id="csv-drop"
+            ondragover="event.preventDefault();this.classList.add('drag')"
+            ondragleave="this.classList.remove('drag')"
+            ondrop="handleDrop(event)">
+            <input type="file" accept=".csv,.txt" onchange="handleFileInput(this)"/>
+            <div style="font-size:32px;margin-bottom:8px">📂</div>
+            <div style="font-weight:600;color:var(--accent)">اسحب الملف هنا أو اضغط للاختيار</div>
+            <div style="font-size:12px;color:var(--muted);margin-top:4px">CSV أو TXT</div>
+          </div>
+          <div id="csv-preview" style="display:none;gap:8px;flex-direction:column">
+            <div style="background:var(--ok-m);border:1px solid var(--ok);border-radius:var(--r);padding:14px">
+              <div style="font-size:14px;font-weight:700;margin-bottom:10px;color:var(--ok)">✅ <span id="csv-new-cnt">0</span> متسابق جديد &nbsp;|&nbsp; <span id="csv-dup-cnt" style="color:var(--muted);font-weight:500">0 مكرر</span></div>
+              <div id="csv-rows-preview" style="max-height:180px;overflow-y:auto;font-size:13px"></div>
+            </div>
+            <button class="btn bp bfull blg" id="import-now-btn" onclick="importCSV()">📥 استيراد الآن</button>
+            <button class="btn bg bfull" onclick="cancelCSV()">✕ إلغاء</button>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="ch"><div class="ch-l"><span class="ch-icon">📊</span><span class="ch-title">الإحصائيات</span></div></div>
+        <div class="cb"><div class="g3" id="reg-stats"></div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="ch"><div class="ch-l"><span class="ch-icon">👥</span><span class="ch-title">المسجلون</span><span class="bdg ba" id="reg-cnt">0</span></div></div>
+      <div class="cb">
+        <div style="position:relative"><span style="position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--subtle)">🔍</span><input id="r-search" style="padding-right:36px" placeholder="بحث..." oninput="renderReg()"/></div>
+        <div class="sc" style="margin-top:12px" id="reg-list"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TAB: الاستقبال -->
+<div class="pane" id="pane-ci">
+  <div class="card">
+    <div class="ch"><div class="ch-l"><span class="ch-icon">✅</span><span class="ch-title">تأكيد الحضور</span><span class="bdg bsc" id="ci-badge">0/0</span></div></div>
+    <div class="cb">
+      <div class="prog"><div class="prog-f" id="ci-prog" style="width:0%"></div></div>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px" id="ci-pct">0%</div>
+      <div style="position:relative;margin-top:16px"><span style="position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--subtle)">🔍</span><input id="ci-search" style="padding-right:36px" placeholder="بحث..." oninput="renderCI()"/></div>
+      <div class="sc" style="margin-top:12px" id="ci-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- TAB: الانتظار -->
+<div class="pane" id="pane-q">
+  <div class="g2">
+    <div class="card">
+      <div class="ch"><div class="ch-l"><span class="ch-icon">⏳</span><span class="ch-title">قائمة الانتظار</span><span class="bdg bwc" id="q-badge">0</span></div></div>
+      <div class="cb" id="q-body"></div>
+    </div>
+    <div class="fcol">
+      <div class="card"><div class="ch"><div class="ch-l"><span class="ch-icon">✅</span><span class="ch-title">أنهوا الاختبار</span><span class="bdg bsc" id="done-badge">0</span></div></div><div class="cb"><div class="sc-sm" id="done-list"></div></div></div>
+      <div class="card"><div class="ch"><div class="ch-l"><span class="ch-icon">⏭️</span><span class="ch-title">تخطّوا</span><span class="bdg bdc" id="skip-badge">0</span></div></div><div class="cb"><div class="sc-sm" id="skip-list"></div></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- TAB: غرفة الاختبار -->
+<div class="pane" id="pane-ex">
+  <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:16px;align-items:start">
+    <div class="fcol">
+      <div class="card" id="ex-card">
+        <div class="ch"><div class="ch-l"><span class="ch-icon">🎯</span><span class="ch-title">غرفة الاختبار</span></div></div>
+        <div class="cb" id="ex-body"></div>
+      </div>
+    </div>
+    <div class="fcol">
+      <div class="card"><div class="ch"><div class="ch-l"><span class="ch-icon">👤</span><span class="ch-title">التالي</span></div></div><div class="cb" id="next-box"></div></div>
+      <div class="card"><div class="ch"><div class="ch-l"><span class="ch-icon">📊</span><span class="ch-title">الإحصائيات</span></div></div><div class="cb"><div class="g3" id="ex-stats"></div></div></div>
+      <div class="card"><div class="ch"><div class="ch-l"><span class="ch-icon">💡</span><span class="ch-title">تلميحات</span></div></div>
+        <div class="cb" style="font-size:13px;color:var(--muted);line-height:2.4">
+          <div>▶ <strong style="color:var(--accent)">التالي</strong> — ينهي الدور ويستدعي التالي</div>
+          <div>🔴 <strong style="color:var(--err)">لم يحضر</strong> — تخطّي المتسابق</div>
+          <div>⏱ العداد يبدأ تلقائياً عند الاستدعاء</div>
+          <div>🟡 تحذير بعد 5 دقائق | 🔴 تنبيه بعد 10</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TAB: السجل -->
+<div class="pane" id="pane-log">
+  <div class="card">
+    <div class="ch"><div class="ch-l"><span class="ch-icon">📜</span><span class="ch-title">سجل الأحداث</span><span class="bdg bnc" id="log-badge">0</span></div></div>
+    <div class="cb"><div style="max-height:600px;overflow-y:auto" id="log-list"></div></div>
+  </div>
+</div>
+
+<!-- TAB: الإعدادات -->
+<div class="pane" id="pane-set">
+  <div class="g2">
+    <div class="fcol">
+      <div class="card">
+        <div class="ch"><div class="ch-l"><span class="ch-icon">🏷️</span><span class="ch-title">إعدادات عامة</span></div></div>
+        <div class="cb fcol" style="gap:12px">
+          <div><div class="lbl">اسم المسابقة</div><input id="s-name"/></div>
+          <div><div class="lbl">الفئات (سطر لكل فئة)</div><textarea id="s-cats" rows="5"></textarea></div>
+          <div>
+            <div class="lbl">شعار المسابقة (PNG/JPG)</div>
+            <div class="upload-area" style="padding:16px">
+              <input type="file" accept="image/*" onchange="handleLogoUpload(this)"/>
+              <div id="logo-prev" style="font-size:13px;color:var(--muted)">📁 اختر صورة الشعار</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="ch"><div class="ch-l"><span class="ch-icon">🔊</span><span class="ch-title">الصوت</span></div></div>
+        <div class="cb fcol" style="gap:14px">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <span style="font-size:14px;font-weight:600">تفعيل الصوت</span>
+            <div class="tgl on" id="snd-tgl" onclick="toggleSet('sound')"><div class="tgl-k"></div></div>
+          </div>
+          <div>
+            <div class="lbl" id="vol-lbl">مستوى الصوت: 75%</div>
+            <input type="range" id="s-vol" min="0" max="1" step="0.05" value="0.75" oninput="S.volume=parseFloat(this.value);updateVolLbl()"/>
+          </div>
+          <div>
+            <div class="lbl">معاينة الأصوات</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button class="btn bg bsm" onclick="snd('call')">🔔 استدعاء</button>
+              <button class="btn bg bsm" onclick="snd('checkin')">✅ حضور</button>
+              <button class="btn bg bsm" onclick="snd('skip')">⏭️ تخطّي</button>
+              <button class="btn bg bsm" onclick="snd('success')">🎉 نجاح</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="fcol">
+      <div class="card">
+        <div class="ch"><div class="ch-l"><span class="ch-icon">🎨</span><span class="ch-title">المظهر والألوان</span></div></div>
+        <div class="cb fcol" style="gap:14px">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <span style="font-size:14px;font-weight:600">الوضع الداكن</span>
+            <div class="tgl on" id="theme-tgl" onclick="toggleTheme()"><div class="tgl-k"></div></div>
+          </div>
+          <div>
+            <div class="lbl">لون التمييز</div>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px" id="accent-list"></div>
+            <div style="display:flex;align-items:center;gap:8px"><span class="lbl" style="margin:0">مخصص:</span><input type="color" id="s-accent" value="#f59e0b" oninput="setAccent(this.value)"/></div>
+          </div>
+          <div class="divl"><div class="divl-l"></div><span class="divl-t">خلفيات (صور من جهازك)</span><div class="divl-l"></div></div>
+          <div>
+            <div class="lbl">خلفية لوحة التحكم</div>
+            <div class="upload-area" style="padding:14px">
+              <input type="file" accept="image/*" onchange="handleBgUpload(this,'main')"/>
+              <div id="main-bg-prev" style="font-size:12px;color:var(--muted)">📁 اختر صورة</div>
+            </div>
+            <button class="btn bg bsm" style="margin-top:6px;width:auto" onclick="clearBg('main')">✕ إزالة</button>
+          </div>
+          <div>
+            <div class="lbl">خلفية شاشة العرض</div>
+            <div class="upload-area" style="padding:14px">
+              <input type="file" accept="image/*" onchange="handleBgUpload(this,'disp')"/>
+              <div id="disp-bg-prev" style="font-size:12px;color:var(--muted)">📁 اختر صورة</div>
+            </div>
+            <button class="btn bg bsm" style="margin-top:6px;width:auto" onclick="clearBg('disp')">✕ إزالة</button>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <span style="font-size:14px">إظهار المتسابق التالي في شاشة العرض</span>
+            <div class="tgl on" id="shownext-tgl" onclick="toggleSet('showNext')"><div class="tgl-k"></div></div>
+          </div>
+        </div>
+      </div>
+      <div class="card"><div class="ch"><div class="ch-l"><span class="ch-icon">📊</span><span class="ch-title">ملخص</span></div></div><div class="cb"><div class="g2" id="set-stats"></div></div></div>
+      <div class="card">
+        <div class="ch"><div class="ch-l"><span class="ch-icon">⚠️</span><span class="ch-title">منطقة الخطر</span></div></div>
+        <div class="cb fcol" style="gap:8px">
+          <button class="btn bg bfull" onclick="resetCI()">🔄 إعادة ضبط الحضور</button>
+          <button class="btn bd bfull" onclick="resetAll()">🗑️ حذف كل البيانات</button>
+        </div>
+      </div>
+      <button class="btn bp bfull blg" onclick="saveSettings()">💾 حفظ الإعدادات</button>
+    </div>
+  </div>
+</div>
+
+</div><!-- /main -->
+
+<script>
+// ═══ STATE ═══════════════════════════════════
+let comps={}, AS={
+  currentCompetitorId:null,stopwatchStartedAt:null,stopwatchElapsed:0,
+  stopwatchRunning:false,queueCounter:0,lastUpdated:Date.now(),displayMessage:""
+};
+let S={
+  compName:"بطولة المعرفة ٢٠٢٥",categories:["عام","أ","ب","ج","د"],
+  soundEnabled:true,volume:.75,theme:"dark",accentColor:"#f59e0b",
+  logoB64:"",mainBgB64:"",dispBgB64:"",showNext:true
+};
+let csvParsed=[], swTick=null, dispWin=null, activeTab="reg";
+
+const TABS=[
+  {id:"reg",label:"المتسابقون",icon:"📋"},{id:"ci",label:"الاستقبال",icon:"✅"},
+  {id:"q",label:"الانتظار",icon:"⏳"},{id:"ex",label:"غرفة الاختبار",icon:"🎯"},
+  {id:"log",label:"السجل",icon:"📜"},{id:"set",label:"الإعدادات",icon:"⚙️"},
+];
+const ACCENTS=[
+  {n:"ذهبي",c:"#f59e0b"},{n:"أزرق",c:"#3b82f6"},{n:"أخضر",c:"#10b981"},
+  {n:"بنفسجي",c:"#8b5cf6"},{n:"وردي",c:"#ec4899"},{n:"برتقالي",c:"#f97316"},
+  {n:"سماوي",c:"#06b6d4"},{n:"أحمر",c:"#f43f5e"}
+];
+
+// ═══ FIREBASE ════════════════════════════════
+window.addEventListener("fb-ready",()=>{
+  const{db,ref,set,onValue,push}=window._fb;
+  onValue(ref(db,".info/connected"),s=>{
+    const on=s.val()===true;
+    document.getElementById("cdot").className="dot "+(on?"on":"off");
+    const l=document.getElementById("clbl");l.textContent=on?"متصل":"غير متصل";l.style.color=on?"var(--ok)":"var(--err)";
+  });
+  onValue(ref(db,"competitors"),s=>{comps=s.val()||{};renderAll();});
+  onValue(ref(db,"appState"),s=>{if(s.val()){AS=s.val();renderEx();pushToDisp();}});
+  onValue(ref(db,"settings"),s=>{
+    if(s.val()){S={...S,...s.val()};applyTheme();syncSetUI();renderAll();}
+  });
+  onValue(ref(db,"logs"),s=>{
+    const d=s.val();
+    if(!d){renderLogs([]);return;}
+    renderLogs(Object.entries(d).map(([id,v])=>({...v,id})).sort((a,b)=>b.timestamp-a.timestamp).slice(0,200));
+  });
+  set(ref(db,"appState"),AS).catch(()=>{});
+});
+
+// ═══ DERIVED ═════════════════════════════════
+const compList=()=>Object.values(comps).sort((a,b)=>a.createdAt-b.createdAt);
+const waitingQ=()=>compList().filter(c=>c.status==="waiting").sort((a,b)=>(a.queuePosition||999)-(b.queuePosition||999));
+const curComp=()=>AS.currentCompetitorId?comps[AS.currentCompetitorId]||null:null;
+const nextComp=()=>waitingQ()[0]||null;
+const doneList=()=>compList().filter(c=>c.status==="done");
+const skipList=()=>compList().filter(c=>c.status==="skipped");
+
+// ═══ TABS ═════════════════════════════════════
+function buildTabs(){
+  document.getElementById("tabs-nav").innerHTML=TABS.map(t=>
+    `<button class="tnav${t.id===activeTab?" on":""}" id="tnav-${t.id}" onclick="switchTab('${t.id}')">
+      <span>${t.icon}</span>${t.label}
+      <span class="tbadge" id="tbdg-${t.id}" style="display:none">0</span>
+    </button>`).join("");
+}
+function switchTab(id){
+  activeTab=id;
+  document.querySelectorAll(".pane").forEach(p=>p.classList.remove("on"));
+  document.querySelectorAll(".tnav").forEach(b=>b.classList.remove("on"));
+  document.getElementById("pane-"+id).classList.add("on");
+  document.getElementById("tnav-"+id).classList.add("on");
+}
+function setTB(id,v){const e=document.getElementById("tbdg-"+id);if(!e)return;if(v>0){e.style.display="";e.textContent=v;}else e.style.display="none";}
+
+// ═══ RENDER ══════════════════════════════════
+function renderAll(){renderReg();renderCI();renderQ();renderEx();setTB("reg",compList().length);setTB("ci",compList().filter(c=>!c.checkedIn).length);setTB("q",waitingQ().length);syncSetStats();}
+
+function renderReg(){
+  const s=gv("r-search"),list=compList().filter(c=>c.name.includes(s)||c.category.includes(s));
+  const SC={registered:"n",waiting:"i",current:"a",done:"s",skipped:"d"};
+  const SL={registered:"مسجل",waiting:"ينتظر",current:"حالياً",done:"انتهى",skipped:"تخطّي"};
+  document.getElementById("reg-cnt").textContent=compList().length;
+  document.getElementById("reg-list").innerHTML=list.length===0
+    ?`<div class="empty"><div style="font-size:40px;opacity:.4;margin-bottom:8px">📋</div><p>${s?"لا نتائج":"لا يوجد متسابقون"}</p></div>`
+    :list.map(c=>`<div class="row">
+      <div class="frow" style="flex:1;min-width:0">
+        <div class="av av-${c.status==="done"?"s":c.status==="current"?"a":"n"}" style="width:40px;height:40px;font-size:14px">${c.name[0]||"؟"}</div>
+        <div style="min-width:0"><div style="font-weight:600;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.name}</div><div style="font-size:12px;color:var(--muted)">${c.category}</div></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+        <span class="bdg b${SC[c.status]}c">${SL[c.status]}</span>
+        ${c.status==="registered"?`<button class="btn bg bsm" onclick="editComp('${c.id}')">✏️</button><button class="btn bd bsm" onclick="delComp('${c.id}','${c.name.replace(/'/g,"\\'")}')">🗑️</button>`:""}
+      </div></div>`).join("");
+  const ST=["registered","waiting","current","done","skipped"];
+  const STC={registered:"var(--muted)",waiting:"var(--info)",current:"var(--accent)",done:"var(--ok)",skipped:"var(--err)"};
+  const STL={registered:"مسجل",waiting:"ينتظر",current:"حالياً",done:"انتهى",skipped:"تخطّي"};
+  document.getElementById("reg-stats").innerHTML=ST.map(s=>{
+    const cnt=compList().filter(c=>c.status===s).length;
+    return`<div style="background:var(--surface2);border-radius:var(--r);padding:12px 8px;text-align:center;border:1px solid ${STC[s]}22"><div style="font-size:22px;font-weight:900;color:${STC[s]}">${cnt}</div><div style="font-size:11px;color:var(--muted)">${STL[s]}</div></div>`;
+  }).join("");
+  buildCatSel();
+}
+
+function renderCI(){
+  const s=gv("ci-search"),list=compList().filter(c=>c.name.includes(s)||c.category.includes(s));
+  const checked=compList().filter(c=>c.checkedIn).length,total=compList().length;
+  const pct=total>0?Math.round(checked/total*100):0;
+  document.getElementById("ci-badge").textContent=checked+"/"+total;
+  document.getElementById("ci-prog").style.width=pct+"%";
+  document.getElementById("ci-pct").textContent=pct+"%";
+  document.getElementById("ci-list").innerHTML=list.length===0
+    ?`<div class="empty"><div style="font-size:36px;opacity:.4;margin-bottom:8px">🔍</div><p>لا توجد نتائج</p></div>`
+    :list.map(c=>`<div class="row" style="opacity:${c.status==="done"||c.status==="skipped"?.5:1}">
+      <div class="frow" style="flex:1;min-width:0">
+        <div class="av av-${c.checkedIn?"s":"n"}" style="width:40px;height:40px;font-size:14px">${c.name[0]||"؟"}</div>
+        <div style="min-width:0"><div style="font-weight:600;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.name}</div>
+        <div style="font-size:12px;color:var(--muted)">${c.category}${c.checkedIn&&c.queuePosition?" · دور #"+c.queuePosition:""}${c.checkedIn&&c.checkInTime?" · "+new Date(c.checkInTime).toLocaleTimeString("ar-SA",{hour:"2-digit",minute:"2-digit"}):""}</div></div>
+      </div>
+      <div style="flex-shrink:0">${c.checkedIn?`<span class="bdg bsc">✓ حضر</span>`:`<button class="btn bs bsm" onclick="doCheckin('${c.id}')">✅ حضر</button>`}</div>
+      </div>`).join("");
+}
+
+function renderQ(){
+  const wq=waitingQ(),cur=curComp(),done=doneList(),sk=skipList();
+  document.getElementById("q-badge").textContent=wq.length;
+  document.getElementById("done-badge").textContent=done.length;
+  document.getElementById("skip-badge").textContent=sk.length;
+  let h="";
+  if(cur)h+=`<div style="background:var(--accent-m);border:1px solid var(--accent);border-radius:var(--r);padding:12px 14px;display:flex;align-items:center;gap:10px;margin-bottom:12px">
+    <div style="width:36px;height:36px;background:var(--accent);border-radius:var(--rs);display:flex;align-items:center;justify-content:center;flex-shrink:0">🎯</div>
+    <div><div style="font-size:11px;color:var(--accent);font-weight:700;letter-spacing:1px">يُختبر الآن</div><div style="font-weight:700;font-size:15px">${cur.name}</div><div style="font-size:12px;color:var(--muted)">${cur.category}</div></div></div>`;
+  h+=wq.length===0?`<div class="empty"><div style="font-size:36px;opacity:.4;margin-bottom:8px">⏳</div><p>قائمة الانتظار فارغة</p></div>`
+    :`<div class="sc">${wq.map((c,i)=>`<div class="row">
+      <div style="width:32px;height:32px;background:${i===0?"var(--accent-m)":"var(--surface2)"};border:1px solid ${i===0?"var(--accent)":"var(--border-strong)"};border-radius:var(--rs);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;color:${i===0?"var(--accent)":"var(--muted)"};flex-shrink:0">${c.queuePosition}</div>
+      <div class="av av-i" style="width:34px;height:34px;font-size:12px">${c.name[0]}</div>
+      <div style="flex:1;min-width:0"><div style="font-weight:600;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.name}</div><div style="font-size:12px;color:var(--muted)">${c.category}</div></div>
+      ${i===0?`<span class="bdg ba">التالي</span>`:""}
+      </div>`).join("")}</div>`;
+  document.getElementById("q-body").innerHTML=h;
+  document.getElementById("done-list").innerHTML=done.length===0?`<div class="empty" style="padding:20px"><p style="opacity:.4">لا أحد انتهى</p></div>`
+    :done.map(c=>`<div class="row"><div class="av av-s" style="width:32px;height:32px;font-size:11px">${c.name[0]}</div><div style="flex:1;font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.name}</div><span class="bdg bsc">#${c.queuePosition}</span></div>`).join("");
+  document.getElementById("skip-list").innerHTML=sk.length===0?`<div class="empty" style="padding:20px"><p style="opacity:.4">لا يوجد متخطّون</p></div>`
+    :sk.map(c=>`<div class="row"><div class="av av-n" style="width:32px;height:32px;font-size:11px">${c.name[0]}</div><div style="flex:1;font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.name}</div><span class="bdg bdc">تخطّي</span></div>`).join("");
+}
+
+function renderEx(){
+  const cur=curComp(),nxt=nextComp(),wq=waitingQ(),done=doneList(),sk=skipList();
+  document.getElementById("ex-card").className="card"+(cur?" glow":"");
+  document.getElementById("next-box").innerHTML=nxt
+    ?`<div class="frow"><div class="av av-i" style="width:48px;height:48px;font-size:18px">${nxt.name[0]}</div><div><div style="font-weight:700;font-size:16px">${nxt.name}</div><div style="font-size:13px;color:var(--muted)">دور #${nxt.queuePosition} · ${nxt.category}</div></div></div>`
+    :`<div style="color:var(--muted);text-align:center;padding:12px 0">لا يوجد متسابق تالٍ</div>`;
+  document.getElementById("ex-stats").innerHTML=`
+    <div class="stat-c" style="border-color:var(--warn)33"><div style="font-size:20px">⏳</div><div class="stat-v" style="color:var(--warn)">${wq.length}</div><div class="stat-lb">ينتظر</div></div>
+    <div class="stat-c" style="border-color:var(--ok)33"><div style="font-size:20px">✅</div><div class="stat-v" style="color:var(--ok)">${done.length}</div><div class="stat-lb">انتهى</div></div>
+    <div class="stat-c" style="border-color:var(--err)33"><div style="font-size:20px">⏭️</div><div class="stat-v" style="color:var(--err)">${sk.length}</div><div class="stat-lb">تخطّي</div></div>`;
+  if(cur){
+    document.getElementById("ex-body").innerHTML=`
+      <div style="text-align:center">
+        <div style="background:linear-gradient(135deg,var(--accent-m),transparent);border:1px solid var(--accent);border-radius:var(--rl);padding:28px 20px;margin-bottom:16px">
+          <div style="font-size:80px;font-weight:900;color:var(--accent);line-height:1;margin-bottom:4px">#${cur.queuePosition}</div>
+          <div style="font-size:28px;font-weight:800;margin-bottom:6px">${cur.name}</div>
+          <span class="bdg ba">${cur.category}</span>
+        </div>
+        <div style="padding:20px;background:var(--surface2);border-radius:var(--rl);margin-bottom:12px;border:1px solid var(--info)33">
+          <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">⏱ عداد الإيقاف</div>
+          <div id="sw-disp" style="font-family:monospace;font-size:58px;font-weight:900;letter-spacing:3px;color:var(--info)">00:00</div>
+          <div id="sw-msg" style="font-size:12px;margin-top:4px"></div>
+          <div style="display:flex;justify-content:center;gap:4px;margin-top:12px" id="sw-dots">${[...Array(10)].map((_,i)=>`<div id="swd${i}" style="width:6px;height:6px;border-radius:50%;background:var(--border-strong)"></div>`).join("")}</div>
+        </div>
+        <div style="display:flex;gap:8px;justify-content:center;margin-bottom:16px">
+          <button class="btn bg" id="sw-tog" onclick="toggleSW()">⏸ إيقاف مؤقت</button>
+          <button class="btn bg" onclick="resetSW()">🔄 إعادة ضبط</button>
+        </div>
+        <div style="display:flex;gap:10px">
+          <button class="btn bp" style="flex:1" onclick="callNext()">⏭️ التالي</button>
+          <button class="btn bd" onclick="skipCur()">🚫 لم يحضر</button>
+        </div>
+      </div>`;
+    startSWTick();
+  } else {
+    stopSWTick();
+    document.getElementById("ex-body").innerHTML=`
+      <div style="text-align:center;padding:32px 20px">
+        <div style="font-size:64px;margin-bottom:16px;opacity:.3">🎯</div>
+        <div style="font-size:18px;color:var(--muted);margin-bottom:20px">${wq.length>0?wq.length+" متسابق ينتظر":"لا يوجد متسابقون في الانتظار"}</div>
+        ${wq.length>0?`<button class="btn bp blg" onclick="callNext()">🚀 استدعاء الأول</button>`:""}
+      </div>`;
+  }
+  updateSWUI();
+  pushToDisp();
+}
+
+function renderLogs(logs){
+  document.getElementById("log-badge").textContent=logs.length;
+  const IC={success:"✅",info:"ℹ️",warning:"⚠️",error:"❌"};
+  const CC={success:"var(--ok)",info:"var(--info)",warning:"var(--warn)",error:"var(--err)"};
+  document.getElementById("log-list").innerHTML=logs.length===0
+    ?`<div class="empty"><div style="font-size:36px;opacity:.4">📜</div><p>السجل فارغ</p></div>`
+    :logs.map(l=>`<div style="display:flex;gap:10px;padding:10px 4px;border-bottom:1px solid var(--border)">
+      <span style="flex-shrink:0;margin-top:1px">${IC[l.type]||"ℹ️"}</span>
+      <div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:500;color:${CC[l.type]||"var(--info)"};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${l.message}</div>
+      <div style="font-size:11px;color:var(--subtle);margin-top:2px">${new Date(l.timestamp).toLocaleTimeString("ar-SA",{hour:"2-digit",minute:"2-digit",second:"2-digit"})}</div></div></div>`).join("");
+}
+
+// ═══ STOPWATCH ════════════════════════════════
+function getElapsed(){return AS.stopwatchRunning&&AS.stopwatchStartedAt?AS.stopwatchElapsed+(Date.now()-AS.stopwatchStartedAt):AS.stopwatchElapsed;}
+function fmtMs(ms){const t=Math.floor(ms/1000),h=Math.floor(t/3600),m=Math.floor((t%3600)/60),s=t%60;return h>0?p2(h)+":"+p2(m)+":"+p2(s):p2(m)+":"+p2(s);}
+const p2=n=>String(n).padStart(2,"0");
+function updateSWUI(){
+  const el=document.getElementById("sw-disp");if(!el)return;
+  const ms=getElapsed(),ts=Math.floor(ms/1000);
+  const col=ts>600?"var(--err)":ts>300?"var(--warn)":"var(--info)";
+  el.textContent=fmtMs(ms);el.style.color=col;el.style.animation=ts>600?"pulse 1s infinite":"";
+  const msg=document.getElementById("sw-msg");
+  if(msg)msg.innerHTML=ts>600?`<span style="color:var(--err);font-weight:700">🔴 مدة طويلة جداً!</span>`:ts>300?`<span style="color:var(--warn)">⚠️ مدة طويلة</span>`:"";
+  for(let i=0;i<10;i++){const d=document.getElementById("swd"+i);if(d)d.style.background=ts>i*30?col:"var(--border-strong)";}
+  const tb=document.getElementById("sw-tog");if(tb)tb.innerHTML=AS.stopwatchRunning?"⏸ إيقاف مؤقت":"▶️ تشغيل";
+}
+function startSWTick(){stopSWTick();if(AS.stopwatchRunning)swTick=setInterval(updateSWUI,1000);}
+function stopSWTick(){if(swTick){clearInterval(swTick);swTick=null;}}
+
+// ═══ FIREBASE ACTIONS ════════════════════════
+async function addComp(){
+  const name=gv("r-name").trim(),cat=gv("r-cat");
+  if(!name){toast("يرجى إدخال الاسم","err");return;}
+  if(Object.values(comps).some(c=>c.name.trim()===name)){toast("المتسابق مسجل مسبقاً","err");return;}
+  setBL("r-add-btn",true);
+  const{db,ref,push,set}=window._fb;
+  const nr=push(ref(db,"competitors"));
+  await set(nr,{id:nr.key,name,category:cat,checkedIn:false,checkInTime:null,queuePosition:null,status:"registered",createdAt:Date.now()});
+  sv("r-name","");toast("تم تسجيل "+name,"ok");addLog("تسجيل: "+name+" ("+cat+")","success");snd("success");
+  setBL("r-add-btn",false);
+}
+
+// ─── CSV ─────────────────────────────────────
+function handleFileInput(input){
+  const f=input.files[0];if(!f)return;
+  readCSVFile(f);
+}
+function handleDrop(e){
+  e.preventDefault();document.getElementById("csv-drop").classList.remove("drag");
+  const f=e.dataTransfer.files[0];if(!f)return;
+  readCSVFile(f);
+}
+function readCSVFile(file){
+  // Try UTF-8, fallback to windows-1256 for Arabic files
+  const reader=new FileReader();
+  reader.onload=ev=>parseCSVText(ev.target.result);
+  reader.readAsText(file,"UTF-8");
+}
+function parseCSVText(text){
+  const existing=new Set(Object.values(comps).map(c=>c.name.trim()));
+  const lines=text.trim().split(/\r?\n/).filter(l=>l.trim());
+  if(lines.length===0){toast("الملف فارغ","err");return;}
+  // Auto-detect separator
+  const firstLine=lines[0];
+  const sep=firstLine.includes("\t")?"\t":firstLine.includes(";")?";":","
+  // Skip header row if first cell looks like a header
+  const headerWords=["الاسم","اسم","name","الرباعي","المتسابق","الفئة","category"];
+  let startIdx=0;
+  const firstCells=lines[0].split(sep).map(s=>s.trim().toLowerCase().replace(/^["']|["']$/g,""));
+  if(headerWords.some(h=>firstCells[0].includes(h)||firstCells[0]===h))startIdx=1;
+
+  const newParsed=[];
+  for(let i=startIdx;i<lines.length;i++){
+    const line=lines[i];if(!line.trim())continue;
+    const parts=line.split(sep).map(s=>s.trim().replace(/^["']|["']$/g,"").trim());
+    const name=parts[0],cat=parts[1]||S.categories[0]||"عام";
+    if(!name||name.length===0)continue;
+    newParsed.push({name,cat,dup:existing.has(name)});
+  }
+  if(newParsed.length===0){toast("لم يتم العثور على بيانات صالحة في الملف","err");return;}
+  // Update global
+  csvParsed=newParsed;
+  const freshCount=csvParsed.filter(r=>!r.dup).length;
+  const dupCount=csvParsed.filter(r=>r.dup).length;
+  document.getElementById("csv-new-cnt").textContent=freshCount;
+  document.getElementById("csv-dup-cnt").textContent=dupCount+" مكرر";
+  document.getElementById("csv-rows-preview").innerHTML=csvParsed.map(r=>
+    `<div style="padding:5px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:8px">
+      <span style="font-weight:600;color:${r.dup?"var(--muted)":"var(--text)"};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">${r.name}</span>
+      <span class="bdg ${r.dup?"bnc":"bsc"}" style="flex-shrink:0">${r.dup?"مكرر ⚠️":r.cat}</span>
+    </div>`).join("");
+  // Show preview panel
+  const prev=document.getElementById("csv-preview");
+  prev.style.cssText="display:flex;flex-direction:column;gap:8px;margin-top:4px";
+  // Update import button text
+  const ibtn=document.getElementById("import-now-btn");
+  if(ibtn)ibtn.textContent=freshCount>0?"📥 استيراد "+freshCount+" متسابق الآن":"لا يوجد جدد للاستيراد";
+  if(freshCount===0){toast("كل المتسابقين مسجلون مسبقاً","warn");}
+  else{toast(freshCount+" متسابق جاهز — اضغط استيراد الآن","ok");}
+}
+function cancelCSV(){
+  csvParsed=[];
+  document.getElementById("csv-preview").style.display="none";
+}
+async function importCSV(){
+  const fresh=csvParsed.filter(r=>!r.dup);
+  if(fresh.length===0){toast("لا يوجد متسابقون جدد","err");return;}
+  if(!window._fb){toast("Firebase غير متصل","err");return;}
+  const ibtn=document.getElementById("import-now-btn");
+  if(ibtn){ibtn.disabled=true;ibtn.innerHTML=`<span style="animation:spin 1s linear infinite;display:inline-block">⟳</span> جاري...`;}
+  const{db,ref,update}=window._fb;
+  const ts=Date.now();
+  // توليد مفاتيح محلية بدون Firebase (نفس خوارزمية push)
+  function genKey(){
+    const CHARS="-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz";
+    let t=Date.now(),r="";
+    for(let i=7;i>=0;i--){r=CHARS[t%64]+r;t=Math.floor(t/64);}
+    let rand="";for(let i=0;i<12;i++)rand+=CHARS[Math.floor(Math.random()*64)];
+    return r+rand;
+  }
+  const batch={};
+  fresh.forEach((row,i)=>{
+    const key=genKey()+"_"+i;
+    batch["competitors/"+key]={
+      id:key,name:row.name,category:row.cat,
+      checkedIn:false,checkInTime:null,queuePosition:null,
+      status:"registered",createdAt:ts+i
+    };
+  });
+  try{
+    await update(ref(db),batch);
+    csvParsed=[];
+    document.getElementById("csv-preview").style.cssText="display:none";
+    toast("✅ تم استيراد "+fresh.length+" متسابق!","ok");
+    addLog("استيراد: "+fresh.length+" متسابق","success");
+  }catch(e){
+    toast("خطأ: "+e.message,"err");
+    console.error(e);
+    if(ibtn){ibtn.disabled=false;ibtn.textContent="📥 استيراد الآن";}
+  }
+}
+
+async function delComp(id,name){
+  if(!confirm("حذف "+name+"؟"))return;
+  const{db,ref,remove}=window._fb;
+  await remove(ref(db,"competitors/"+id));
+  toast("تم حذف "+name,"info");addLog("حذف: "+name,"warning");
+}
+function editComp(id){
+  const c=comps[id];if(!c)return;
+  const name=prompt("الاسم:",c.name);if(!name||!name.trim())return;
+  const cat=prompt("الفئة ("+S.categories.join(", ")+"):",c.category)||c.category;
+  const{db,ref,update}=window._fb;
+  update(ref(db,"competitors/"+id),{name:name.trim(),category:cat.trim()}).then(()=>toast("تم الحفظ","ok")).catch(e=>toast(e.message,"err"));
+}
+async function doCheckin(id){
+  const c=comps[id];if(!c||c.checkedIn){toast("سبق تسجيل الحضور","err");return;}
+  const pos=Object.values(comps).filter(x=>x.status==="waiting").length+1;
+  const{db,ref,update}=window._fb;
+  await update(ref(db,"competitors/"+id),{checkedIn:true,checkInTime:Date.now(),queuePosition:pos,status:"waiting"});
+  await update(ref(db,"appState"),{queueCounter:(AS.queueCounter||0)+1,lastUpdated:Date.now()});
+  addLog("حضور: "+c.name+" (#"+pos+")","success");snd("checkin");toast("تم تسجيل حضور "+c.name,"ok");
+}
+async function callNext(){
+  const{db,ref,update}=window._fb;
+  if(AS.currentCompetitorId){
+    await update(ref(db,"competitors/"+AS.currentCompetitorId),{status:"done"});
+    const cur=comps[AS.currentCompetitorId];if(cur)addLog("انتهى: "+cur.name,"success");
+  }
+  const wq=waitingQ();
+  if(wq.length===0){
+    await update(ref(db,"appState"),{currentCompetitorId:null,stopwatchStartedAt:null,stopwatchElapsed:0,stopwatchRunning:false,lastUpdated:Date.now(),displayMessage:"انتهت جميع الأدوار 🏆"});
+    addLog("انتهت قائمة الانتظار","info");toast("انتهت قائمة الانتظار 🎉","info");return;
+  }
+  const nxt=wq[0];
+  await update(ref(db,"competitors/"+nxt.id),{status:"current"});
+  await update(ref(db,"appState"),{currentCompetitorId:nxt.id,stopwatchStartedAt:Date.now(),stopwatchElapsed:0,stopwatchRunning:true,lastUpdated:Date.now(),displayMessage:""});
+  addLog("استدعاء: "+nxt.name+" (#"+nxt.queuePosition+")","info");snd("call");
+}
+async function skipCur(){
+  if(!AS.currentCompetitorId||!confirm("تخطّي المتسابق الحالي؟"))return;
+  const c=comps[AS.currentCompetitorId];
+  const{db,ref,update}=window._fb;
+  await update(ref(db,"competitors/"+AS.currentCompetitorId),{status:"skipped"});
+  addLog("تخطّي: "+(c?c.name:""),"warning");snd("skip");
+  await update(ref(db,"appState"),{currentCompetitorId:null,stopwatchRunning:false,lastUpdated:Date.now()});
+  setTimeout(callNext,300);
+}
+async function toggleSW(){
+  const{db,ref,update}=window._fb;
+  if(AS.stopwatchRunning){
+    const el=AS.stopwatchStartedAt?AS.stopwatchElapsed+(Date.now()-AS.stopwatchStartedAt):AS.stopwatchElapsed;
+    await update(ref(db,"appState"),{stopwatchRunning:false,stopwatchElapsed:el,stopwatchStartedAt:null,lastUpdated:Date.now()});
+  } else {
+    await update(ref(db,"appState"),{stopwatchRunning:true,stopwatchStartedAt:Date.now(),lastUpdated:Date.now()});
+  }
+}
+async function resetSW(){
+  const{db,ref,update}=window._fb;
+  await update(ref(db,"appState"),{stopwatchRunning:false,stopwatchElapsed:0,stopwatchStartedAt:null,lastUpdated:Date.now()});
+}
+async function addLog(msg,type="info"){
+  const{db,ref,push}=window._fb;
+  push(ref(db,"logs"),{message:msg,type,timestamp:Date.now()}).catch(()=>{});
+}
+
+// ═══ SETTINGS ════════════════════════════════
+function buildCatSel(){
+  const el=document.getElementById("r-cat");if(!el)return;
+  el.innerHTML=S.categories.map(c=>`<option value="${c}">${c}</option>`).join("");
+}
+function buildAccentList(){
+  const el=document.getElementById("accent-list");if(!el)return;
+  el.innerHTML=ACCENTS.map(a=>`
+    <div class="cpre${S.accentColor===a.c?" on":""}" onclick="setAccent('${a.c}')" style="${S.accentColor===a.c?"border-color:"+a.c+";color:"+a.c:""}">
+      <div class="cdot" style="background:${a.c}"></div>${a.n}
+    </div>`).join("");
+}
+function setAccent(c){S.accentColor=c;applyTheme();buildAccentList();sv("s-accent",c);}
+
+function syncSetUI(){
+  sv("s-name",S.compName);
+  sv("s-cats",S.categories.join("\n"));
+  sv("s-vol",S.volume);
+  sv("s-accent",S.accentColor||"#f59e0b");
+  updateVolLbl();
+  tglEl("snd-tgl",S.soundEnabled);
+  tglEl("theme-tgl",S.theme==="dark");
+  tglEl("shownext-tgl",S.showNext);
+  buildAccentList();buildCatSel();
+  document.getElementById("hdr-name").textContent=S.compName;
+  // Logo
+  const li=document.getElementById("logo-icon");
+  if(S.logoB64)li.innerHTML=`<img src="${S.logoB64}" style="width:100%;height:100%;object-fit:contain">`;
+  else li.innerHTML="🏆";
+  const lp=document.getElementById("logo-prev");
+  if(lp)lp.innerHTML=S.logoB64?`<img src="${S.logoB64}" style="max-height:60px;border-radius:6px"> ✅ تم الرفع`:"📁 اختر صورة الشعار";
+  // Main BG
+  applyMainBg();
+  const mp=document.getElementById("main-bg-prev");if(mp)mp.textContent=S.mainBgB64?"✅ تم رفع الخلفية":"📁 اختر صورة";
+  const dp=document.getElementById("disp-bg-prev");if(dp)dp.textContent=S.dispBgB64?"✅ تم رفع خلفية الشاشة":"📁 اختر صورة";
+}
+function syncSetStats(){
+  const el=document.getElementById("set-stats");if(!el)return;
+  const list=compList();
+  el.innerHTML=`
+    <div class="stat-c"><div>👥</div><div class="stat-v">${list.length}</div><div class="stat-lb">مسجلون</div></div>
+    <div class="stat-c" style="border-color:var(--warn)33"><div>⏳</div><div class="stat-v" style="color:var(--warn)">${waitingQ().length}</div><div class="stat-lb">ينتظرون</div></div>
+    <div class="stat-c" style="border-color:var(--ok)33"><div>✅</div><div class="stat-v" style="color:var(--ok)">${doneList().length}</div><div class="stat-lb">انتهوا</div></div>
+    <div class="stat-c" style="border-color:var(--err)33"><div>⏭️</div><div class="stat-v" style="color:var(--err)">${skipList().length}</div><div class="stat-lb">تخطّوا</div></div>`;
+}
+function updateVolLbl(){const el=document.getElementById("vol-lbl");if(el)el.textContent="مستوى الصوت: "+Math.round(S.volume*100)+"%";}
+function toggleSet(k){
+  if(k==="sound"){S.soundEnabled=!S.soundEnabled;tglEl("snd-tgl",S.soundEnabled);}
+  else if(k==="showNext"){S.showNext=!S.showNext;tglEl("shownext-tgl",S.showNext);}
+}
+
+// Image handlers (Base64 — no server needed)
+function handleLogoUpload(input){
+  const f=input.files[0];if(!f)return;
+  toB64(f,b64=>{S.logoB64=b64;syncSetUI();toast("تم تحميل الشعار ✅","ok");});
+}
+function handleBgUpload(input,which){
+  const f=input.files[0];if(!f)return;
+  toB64(f,b64=>{
+    if(which==="main"){S.mainBgB64=b64;applyMainBg();}
+    else S.dispBgB64=b64;
+    syncSetUI();toast("تم تحميل الصورة ✅","ok");
+  });
+}
+function clearBg(which){
+  if(which==="main"){S.mainBgB64="";applyMainBg();}
+  else S.dispBgB64="";
+  syncSetUI();toast("تم إزالة الخلفية","info");
+}
+function toB64(file,cb){const r=new FileReader();r.onload=e=>cb(e.target.result);r.readAsDataURL(file);}
+function applyMainBg(){
+  if(S.mainBgB64){document.body.style.backgroundImage=`url(${S.mainBgB64})`;document.body.style.backgroundSize="cover";document.body.style.backgroundPosition="center";document.body.style.backgroundAttachment="fixed";}
+  else document.body.style.backgroundImage="";
+}
+
+async function saveSettings(){
+  S.compName=gv("s-name");
+  S.categories=gv("s-cats").split("\n").filter(Boolean);
+  S.volume=parseFloat(gv("s-vol"));
+  S.accentColor=gv("s-accent");
+  const{db,ref,set}=window._fb;
+  try{
+    await set(ref(db,"settings"),S);
+    toast("تم حفظ الإعدادات ✅","ok");addLog("تم حفظ الإعدادات","info");
+    syncSetUI();buildCatSel();
+  }catch(e){toast("خطأ في الحفظ","err");}
+}
+async function resetAll(){
+  if(!confirm("سيتم حذف جميع البيانات. هل أنت متأكد؟"))return;
+  const{db,ref,set}=window._fb;
+  await set(ref(db,"competitors"),null);await set(ref(db,"logs"),null);
+  await set(ref(db,"appState"),{currentCompetitorId:null,stopwatchStartedAt:null,stopwatchElapsed:0,stopwatchRunning:false,queueCounter:0,lastUpdated:Date.now(),displayMessage:""});
+  toast("تم إعادة ضبط كاملة","warn");addLog("إعادة ضبط كاملة","warning");
+}
+async function resetCI(){
+  if(!confirm("إعادة ضبط الحضور؟"))return;
+  const{db,ref,update}=window._fb;const ups={};
+  Object.values(comps).forEach(c=>{ups["competitors/"+c.id+"/checkedIn"]=false;ups["competitors/"+c.id+"/checkInTime"]=null;ups["competitors/"+c.id+"/queuePosition"]=null;ups["competitors/"+c.id+"/status"]="registered";});
+  ups["appState"]={currentCompetitorId:null,stopwatchStartedAt:null,stopwatchElapsed:0,stopwatchRunning:false,queueCounter:0,lastUpdated:Date.now(),displayMessage:""};
+  await update(ref(db),ups);toast("تم إعادة ضبط الحضور","warn");addLog("إعادة ضبط الحضور","warning");
+}
+
+// ═══ THEME ════════════════════════════════════
+function applyTheme(){
+  document.documentElement.setAttribute("data-theme",S.theme);
+  const ac=S.accentColor||"#f59e0b";
+  document.documentElement.style.setProperty("--accent",ac);
+  document.documentElement.style.setProperty("--accent-m",hexA(ac,.12));
+  document.documentElement.style.setProperty("--accent-t",S.theme==="dark"?"#1a0f00":"#fff8e0");
+  document.getElementById("theme-btn").textContent=S.theme==="dark"?"☀️":"🌙";
+  tglEl("theme-tgl",S.theme==="dark");
+}
+function toggleTheme(){S.theme=S.theme==="dark"?"light":"dark";applyTheme();}
+function hexA(hex,a){try{const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);return`rgba(${r},${g},${b},${a})`;}catch{return hex;}}
+
+// ═══ DISPLAY WINDOW ═══════════════════════════
+// The display page HTML is opened in a new window and receives data via postMessage
+function openDisplay(){
+  unlockAudio();
+  if(dispWin&&!dispWin.closed){dispWin.focus();pushToDisp();return;}
+  dispWin=window.open("","display_window","width=1280,height=720,toolbar=no,menubar=no,scrollbars=no,resizable=yes");
+  if(!dispWin){toast("يرجى السماح بالنوافذ المنبثقة في إعدادات المتصفح","err");return;}
+  dispWin.document.open();
+  dispWin.document.write(getDispHTML());
+  dispWin.document.close();
+  setTimeout(pushToDisp,600);
+}
+function pushToDisp(){
+  if(!dispWin||dispWin.closed)return;
+  try{
+    dispWin.postMessage({type:"update",payload:{
+      cur:curComp(),next:nextComp(),waitingCount:waitingQ().length,
+      AS,S,elapsed:getElapsed()
+    }},"*");
+  }catch(_){}
+}
+
+// Keep display updated
+setInterval(()=>{if(dispWin&&!dispWin.closed)pushToDisp();},1000);
+
+function getDispHTML(){
+  return`<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8"/>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet"/>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Cairo',sans-serif;background:#020617;color:#fff;direction:rtl;min-height:100vh;overflow:hidden}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+@keyframes glow{0%,100%{text-shadow:0 0 40px currentColor}50%{text-shadow:0 0 80px currentColor,0 0 120px currentColor}}
+@keyframes bounceIn{0%{transform:scale(.85);opacity:0}60%{transform:scale(1.04)}100%{transform:scale(1);opacity:1}}
+#wrap{position:relative;min-height:100vh;display:flex;align-items:center;justify-content:center}
+#bg{position:fixed;inset:0;background-size:cover;background-position:center}
+#overlay{position:fixed;inset:0;background:rgba(0,0,0,.55)}
+#ambient{position:fixed;inset:0;pointer-events:none;transition:background 1.2s}
+#flash{position:fixed;inset:0;pointer-events:none;display:none;background:rgba(245,158,11,.18)}
+#clock{position:fixed;top:22px;left:28px;font-size:15px;color:rgba(255,255,255,.3);font-weight:500;z-index:10}
+#logo-row{position:fixed;top:22px;right:28px;display:flex;align-items:center;gap:10px;z-index:10}
+#logo-img{height:42px;object-fit:contain;display:none;border-radius:6px}
+#hdr-comp{font-size:15px;font-weight:700;color:rgba(255,255,255,.45)}
+#center{position:relative;z-index:5;max-width:920px;width:100%;text-align:center;padding:40px;animation:bounceIn .5s ease both}
+.cur-lbl{font-size:15px;letter-spacing:6px;text-transform:uppercase;color:rgba(255,255,255,.4);margin-bottom:10px;font-weight:600}
+#d-num{font-size:clamp(90px,17vw,190px);font-weight:900;line-height:1;margin-bottom:6px;animation:glow 3s infinite}
+#d-name{font-size:clamp(30px,5vw,68px);font-weight:900;margin-bottom:4px;line-height:1.2}
+#d-cat{font-size:clamp(14px,2.2vw,26px);color:rgba(255,255,255,.4);margin-bottom:32px}
+#sw-box{display:inline-block;border-radius:14px;padding:12px 36px;margin-bottom:36px;transition:all .5s}
+#sw-lbl{font-size:11px;letter-spacing:3px;margin-bottom:4px;text-transform:uppercase}
+#sw-val{font-family:monospace;font-size:clamp(30px,5.5vw,62px);font-weight:900;letter-spacing:4px;transition:color .5s}
+#d-btm{display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
+.dinfo{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:11px 26px}
+.dlbl{color:rgba(255,255,255,.35);font-size:.75em;margin-bottom:3px}
+#idle{position:relative;z-index:5;text-align:center;padding:40px}
+#idle-icon{font-size:clamp(70px,13vw,150px);opacity:.15;margin-bottom:20px}
+#idle-msg{font-size:clamp(22px,3.8vw,48px);color:rgba(255,255,255,.3);font-weight:700}
+#idle-cnt{font-size:clamp(13px,1.8vw,20px);color:rgba(255,255,255,.2);margin-top:14px}
+#bar{position:fixed;bottom:0;left:0;right:0;height:3px;background:linear-gradient(90deg,transparent,#f59e0b,transparent);opacity:.4;z-index:10}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="bg"></div><div id="overlay" style="display:none"></div>
+  <div id="ambient"></div><div id="flash"></div>
+  <div id="clock"></div>
+  <div id="logo-row"><img id="logo-img"/><div id="hdr-comp"></div></div>
+  <div id="center" style="display:none">
+    <div class="cur-lbl">المتسابق الحالي</div>
+    <div id="d-num"></div>
+    <div id="d-name"></div>
+    <div id="d-cat"></div>
+    <div id="sw-box"><div id="sw-lbl">⏱ عداد الوقت</div><div id="sw-val">00:00</div></div>
+    <div id="d-btm"></div>
+  </div>
+  <div id="idle"><div id="idle-icon">🏆</div><div id="idle-msg">في انتظار المتسابق</div><div id="idle-cnt"></div></div>
+  <div id="bar"></div>
+</div>
+<script>
+let prevId=null,swTick=null;
+function p2(n){return String(n).padStart(2,"0");}
+function fmt(ms){const t=Math.floor(ms/1000),h=Math.floor(t/3600),m=Math.floor((t%3600)/60),s=t%60;return h>0?p2(h)+":"+p2(m)+":"+p2(s):p2(m)+":"+p2(s);}
+window.addEventListener("message",e=>{if(e.data&&e.data.type==="update")apply(e.data.payload);});
+function apply(p){
+  const{cur,next,waitingCount,AS,S,elapsed}=p;
+  const ac=S.accentColor||"#f59e0b";
+  // BG
+  const bgEl=document.getElementById("bg"),ovEl=document.getElementById("overlay");
+  if(S.dispBgB64){bgEl.style.backgroundImage="url("+S.dispBgB64+")";ovEl.style.display="";}
+  else{bgEl.style.backgroundImage="";ovEl.style.display="none";}
+  // Logo
+  const li=document.getElementById("logo-img");
+  if(S.logoB64){li.src=S.logoB64;li.style.display="";}else li.style.display="none";
+  document.getElementById("hdr-comp").textContent=S.compName;
+  // Flash
+  if(cur&&cur.id!==prevId&&prevId!==null){
+    const fl=document.getElementById("flash");fl.style.display="block";setTimeout(()=>fl.style.display="none",800);
+  }
+  prevId=cur?cur.id:null;
+  // Ambient
+  document.getElementById("ambient").style.background=cur
+    ?"radial-gradient(ellipse at 50% 30%,"+ac+"14 0%,transparent 60%)"
+    :"radial-gradient(ellipse at 50% 30%,rgba(96,165,250,.04) 0%,transparent 60%)";
+  if(cur){
+    document.getElementById("center").style.display="";
+    document.getElementById("idle").style.display="none";
+    document.getElementById("d-num").textContent="#"+cur.queuePosition;
+    document.getElementById("d-num").style.color=ac;
+    document.getElementById("d-name").textContent=cur.name;
+    document.getElementById("d-cat").textContent=cur.category;
+    let btm="";
+    if(S.showNext&&next)btm+=\`<div class="dinfo"><div class="dlbl">التالي</div><div style="color:#60a5fa;font-weight:700">\${next.name}</div></div>\`;
+    btm+=\`<div class="dinfo"><div class="dlbl">في الانتظار</div><div style="color:\${ac};font-weight:700">\${waitingCount}</div></div>\`;
+    document.getElementById("d-btm").innerHTML=btm;
+  } else {
+    document.getElementById("center").style.display="none";
+    document.getElementById("idle").style.display="";
+    document.getElementById("idle-msg").textContent=AS.displayMessage||"في انتظار المتسابق";
+    document.getElementById("idle-cnt").textContent=waitingCount>0?waitingCount+" متسابق ينتظر دوره":"";
+  }
+  // SW update with provided elapsed
+  updateSW(elapsed,AS.stopwatchRunning,AS.stopwatchStartedAt,AS.stopwatchElapsed);
+}
+function updateSW(elapsedMs,running,startedAt,baseElapsed){
+  // Compute current elapsed
+  const ms=running&&startedAt?baseElapsed+(Date.now()-startedAt):baseElapsed;
+  const ts=Math.floor(ms/1000);
+  const col=ts>600?"#f43f5e":ts>300?"#f59e0b":"#60a5fa";
+  const sv=document.getElementById("sw-val");if(!sv)return;
+  sv.textContent=fmt(ms);sv.style.color=col;sv.style.animation=ts>600?"pulse 1s infinite":"";
+  const sb=document.getElementById("sw-box");if(sb){sb.style.background=col+"11";sb.style.border="1px solid "+col+"44";}
+  const sl=document.getElementById("sw-lbl");if(sl)sl.style.color=col+"88";
+  if(swTick)clearInterval(swTick);
+  if(running)swTick=setInterval(()=>{
+    const now=baseElapsed+(Date.now()-startedAt);
+    const t=Math.floor(now/1000);
+    const c=t>600?"#f43f5e":t>300?"#f59e0b":"#60a5fa";
+    sv.textContent=fmt(now);sv.style.color=c;sv.style.animation=t>600?"pulse 1s infinite":"";
+    if(sb){sb.style.background=c+"11";sb.style.border="1px solid "+c+"44";}
+    if(sl)sl.style.color=c+"88";
+  },1000);
+}
+// Clock
+(function clock(){document.getElementById("clock").textContent=new Date().toLocaleTimeString("ar-SA",{hour:"2-digit",minute:"2-digit",second:"2-digit",hour12:true});setTimeout(clock,1000);})();
+<\/script>
+</body></html>`;
+}
+
+// ═══ AUDIO ════════════════════════════════════
+let ac=null;
+function getAC(){if(!ac)ac=new(window.AudioContext||window.webkitAudioContext)();if(ac.state==="suspended")ac.resume();return ac;}
+function unlockAudio(){try{getAC();}catch(_){}}
+function snd(type){
+  if(!S.soundEnabled)return;
+  try{
+    const a=getAC(),t=a.currentTime,v=S.volume||.7;
+    const m=a.createGain();m.gain.value=v;m.connect(a.destination);
+    function tone(f,ot,s,d,gs,ge){const o=a.createOscillator(),g=a.createGain();o.connect(g);g.connect(m);o.type=ot;o.frequency.setValueAtTime(f,s);g.gain.setValueAtTime(gs,s);g.gain.exponentialRampToValueAtTime(Math.max(ge,.001),s+d);o.start(s);o.stop(s+d+.01);}
+    function sweep(fs,fe,ot,s,d,gv){const o=a.createOscillator(),g=a.createGain();o.connect(g);g.connect(m);o.type=ot;o.frequency.setValueAtTime(fs,s);o.frequency.exponentialRampToValueAtTime(fe,s+d);g.gain.setValueAtTime(gv,s);g.gain.exponentialRampToValueAtTime(.001,s+d);o.start(s);o.stop(s+d+.02);}
+    if(type==="call"){[523,659,784].forEach((f,i)=>{sweep(f*.8,f,"sine",t+i*.18,.35,.6);tone(f,"sine",t+i*.18,.5,.3,.001);});[784,988,1175].forEach(f=>tone(f,"sine",t+.55,.8,.25,.001));}
+    else if(type==="checkin"){sweep(660,880,"sine",t,.15,.5);tone(880,"sine",t+.12,.4,.4,.001);}
+    else if(type==="skip"){sweep(400,180,"sine",t,.3,.4);tone(200,"triangle",t,.25,.2,.001);}
+    else if(type==="success"){[523,659,784,1047].forEach((f,i)=>tone(f,"sine",t+i*.1,.35,.4,.001));}
+  }catch(e){console.warn(e);}
+}
+
+// ═══ UI HELPERS ═══════════════════════════════
+function toast(msg,type="info"){
+  const IC={ok:"✅",err:"❌",info:"ℹ️",warn:"⚠️"};
+  const CC={ok:"var(--ok)",err:"var(--err)",info:"var(--info)",warn:"var(--warn)"};
+  const el=document.createElement("div");
+  el.className="toast";el.style.borderColor=(CC[type]||CC.info)+"44";
+  el.innerHTML=`<span>${IC[type]||"ℹ️"}</span><span style="color:var(--text)">${msg}</span>`;
+  document.getElementById("toast-box").prepend(el);
+  setTimeout(()=>el.remove(),4000);
+}
+function tglEl(id,on){const el=document.getElementById(id);if(!el)return;if(on)el.classList.add("on");else el.classList.remove("on");}
+function gv(id){const el=document.getElementById(id);return el?el.value:"";}
+function sv(id,v){const el=document.getElementById(id);if(el)el.value=v!=null?v:"";}
+function setBL(id,load){
+  const el=document.getElementById(id);if(!el)return;
+  el.disabled=load;el.innerHTML=load?`<span class="spin-el">⟳</span> جاري...`:"➕ إضافة متسابق";
+}
+
+// ═══ INIT ═════════════════════════════════════
+window.addEventListener("scroll",()=>document.getElementById("hdr").classList.toggle("scrolled",window.scrollY>10));
+document.addEventListener("click",unlockAudio,{once:true});
+document.getElementById("r-name").addEventListener("keydown",e=>{if(e.key==="Enter")addComp();});
+buildTabs();applyTheme();syncSetUI();buildCatSel();buildAccentList();renderAll();
+</script>
+</body>
+</html>
