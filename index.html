@@ -253,7 +253,7 @@ input[type="file"]{padding:8px;cursor:pointer}
         <div class="cb" style="font-size:13px;color:var(--muted);line-height:2.4">
           <div>▶ <strong style="color:var(--accent)">التالي</strong> — ينهي الدور ويستدعي التالي</div>
           <div>🔴 <strong style="color:var(--err)">لم يحضر</strong> — تخطّي المتسابق</div>
-          <div>⏱ العداد يبدأ تلقائياً عند الاستدعاء</div>
+          <div>⏱ العداد يبدأ تلقائياً عند الاختبار</div>
           <div>🟡 تحذير بعد 5 دقائق | 🔴 تنبيه بعد 10</div>
         </div>
       </div>
@@ -301,7 +301,7 @@ input[type="file"]{padding:8px;cursor:pointer}
           <div>
             <div class="lbl">معاينة الأصوات</div>
             <div style="display:flex;gap:8px;flex-wrap:wrap">
-              <button class="btn bg bsm" onclick="snd('call')">🔔 استدعاء</button>
+              <button class="btn bg bsm" onclick="snd('call')">🔔 اختبار</button>
               <button class="btn bg bsm" onclick="snd('checkin')">✅ حضور</button>
               <button class="btn bg bsm" onclick="snd('skip')">⏭️ تخطّي</button>
               <button class="btn bg bsm" onclick="snd('success')">🎉 نجاح</button>
@@ -352,7 +352,7 @@ input[type="file"]{padding:8px;cursor:pointer}
       </div>
       <div class="card"><div class="ch"><div class="ch-l"><span class="ch-icon">📊</span><span class="ch-title">ملخص</span></div></div><div class="cb"><div class="g2" id="set-stats"></div></div></div>
       <div class="card">
-        <div class="ch"><div class="ch-l"><span class="ch-icon">⚠️</span><span class="ch-title">منطقة الخطر</span></div></div>
+        <div class="ch"><div class="ch-l"><span class="ch-icon">⚠️</span><span class="ch-title">انتبه</span></div></div>
         <div class="cb fcol" style="gap:8px">
           <button class="btn bg bfull" onclick="resetCI()">🔄 إعادة ضبط الحضور</button>
           <button class="btn bd bfull" onclick="resetAll()">🗑️ حذف كل البيانات</button>
@@ -546,7 +546,7 @@ function renderEx(){
       <div style="text-align:center;padding:32px 20px">
         <div style="font-size:64px;margin-bottom:16px;opacity:.3">🎯</div>
         <div style="font-size:18px;color:var(--muted);margin-bottom:20px">${wq.length>0?wq.length+" متسابق ينتظر":"لا يوجد متسابقون في الانتظار"}</div>
-        ${wq.length>0?`<button class="btn bp blg" onclick="callNext()">🚀 استدعاء الأول</button>`:""}
+        ${wq.length>0?`<button class="btn bp blg" onclick="callNext()">🚀 اختبار الأول</button>`:""}
       </div>`;
   }
   updateSWUI();
@@ -734,7 +734,7 @@ async function callNext(){
   const nxt=wq[0];
   await update(ref(db,"competitors/"+nxt.id),{status:"current"});
   await update(ref(db,"appState"),{currentCompetitorId:nxt.id,stopwatchStartedAt:null,stopwatchElapsed:0,stopwatchRunning:false,lastUpdated:Date.now(),displayMessage:""});
-  addLog("استدعاء: "+nxt.name+" (#"+nxt.queuePosition+")","info");snd("call");
+  addLog("اختبار: "+nxt.name+" (#"+nxt.queuePosition+")","info");snd("call");
 }
 async function skipCur(){
   if(!AS.currentCompetitorId||!confirm("تخطّي المتسابق الحالي؟"))return;
